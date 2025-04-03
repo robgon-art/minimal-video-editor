@@ -21,6 +21,8 @@ export const createClipFromFile = (
     fileName: string,
     durationInSeconds: number
 ): Clip => {
+    // Initially use a placeholder URL - the real thumbnail will be loaded later
+    // This allows for asynchronous thumbnail generation without blocking clip creation
     return {
         id: uuidv4(),
         title: fileName.replace(/\.[^/.]+$/, ""), // Remove file extension

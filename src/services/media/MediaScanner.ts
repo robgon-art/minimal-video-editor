@@ -16,6 +16,7 @@ import {
 } from './MediaTransforms';
 import { getFileExtension } from '../../utils/path/PathUtils';
 import { Clip, createClipFromFile } from '../../Clip/ClipModel';
+import { ensureThumbnailsDirectoryExists } from '../../utils/media/BrowserThumbnailGenerator';
 
 // Constants
 export const MEDIA_FOLDER_PATH = '/media';
@@ -64,6 +65,9 @@ export const importMediaFiles = async (files: File[]): Promise<Clip[]> => {
     try {
         // Ensure media directory exists
         await ensureMediaDirectoryExists();
+
+        // Ensure thumbnails directory exists
+        await ensureThumbnailsDirectoryExists();
 
         // Process each file
         const clipPromises = supportedFiles.map(async (file: File) => {

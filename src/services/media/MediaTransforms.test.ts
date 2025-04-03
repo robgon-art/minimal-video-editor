@@ -10,6 +10,15 @@ jest.mock('uuid', () => ({
     v4: () => 'mock-uuid'
 }));
 
+// Mock the ensureThumbnailExists function to return a placeholder URL
+jest.mock('../../utils/media/BrowserThumbnailGenerator', () => ({
+    ensureThumbnailExists: jest.fn().mockImplementation((filePath) => {
+        // Return a placeholder URL directly to avoid any file system operations
+        const fileName = filePath.split('/').pop() || filePath;
+        return Promise.resolve(`https://via.placeholder.com/150?text=${encodeURIComponent(fileName)}`);
+    })
+}));
+
 describe('MediaTransforms', () => {
     describe('createClipFromFile', () => {
         it('should create a clip object with the correct properties', () => {
@@ -78,30 +87,30 @@ describe('MediaTransforms', () => {
         it('should be testable separately without metadata dependencies', async () => {
             // This test just verifies we can test this function
             // without needing to set up file operations
-            const mockGetMetadata = jest.fn().mockImplementation(
-                (path: string) => Promise.resolve({
+            const mockGetMetadata = jest.fn().mockImplementation((path) => {
+                return Promise.resolve({
                     size: 1024,
                     lastModified: new Date(),
                     durationInSeconds: 60
-                } as MediaMetadata)
-            );
+                });
+            });
 
             // This is tested separately in mapPathsToClips integration tests
         });
     });
 
     describe('createThumbnailUrl', () => {
-        it('should create a thumbnail URL with the encoded filename', () => {
+        it('should create a thumbnail URL with the encoded filename', async () => {
             const fileName = 'my video.mp4';
-            const thumbnailUrl = createThumbnailUrl(fileName);
+            const thumbnailUrl = await createThumbnailUrl(fileName);
 
             expect(thumbnailUrl).toContain('https://via.placeholder.com/150');
             expect(thumbnailUrl).toContain(encodeURIComponent(fileName));
         });
 
-        it('should encode special characters in the filename', () => {
+        it('should encode special characters in the filename', async () => {
             const fileName = 'video & movie.mp4';
-            const thumbnailUrl = createThumbnailUrl(fileName);
+            const thumbnailUrl = await createThumbnailUrl(fileName);
 
             expect(thumbnailUrl).toContain(encodeURIComponent(fileName));
         });
