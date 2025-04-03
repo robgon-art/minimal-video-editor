@@ -1,0 +1,37 @@
+
+
+
+Thursday, April 3, 2025 8:45:30 AM
+-------------------------|---------|----------|---------|---------|-------------------
+File                     | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------------|---------|----------|---------|---------|-------------------
+All files                |   67.28 |    53.57 |   66.66 |   67.36 |                   
+ src                     |   21.42 |        0 |   33.33 |   21.42 |                   
+  App.tsx                |     100 |      100 |     100 |     100 |                   
+  index.tsx              |       0 |      100 |     100 |       0 | 7-20              
+  reportWebVitals.ts     |       0 |        0 |       0 |       0 | 3-10
+ src/Clip                |      75 |      100 |      60 |      75 | 
+  ClipView.tsx           |     100 |      100 |     100 |     100 | 
+  ClipViewModel.ts       |   66.66 |      100 |      50 |   66.66 | 29-30
+ src/ClipList            |   63.63 |      100 |      50 |   63.63 | 
+  ClipListView.tsx       |   33.33 |      100 |       0 |   33.33 | 8-9,14-17        
+  ClipListViewModel.ts   |     100 |      100 |     100 |     100 | 
+ src/ClipViewer          |   57.57 |       50 |      60 |   61.29 | 
+  ClipViewerView.tsx     |     100 |       50 |     100 |     100 | 31-37
+  ClipViewerViewModel.ts |   53.33 |      100 |   55.55 |   57.14 | 42-47,56,61-69   
+ src/Editor              |     100 |      100 |     100 |     100 | 
+  EditorView.tsx         |     100 |      100 |     100 |     100 | 
+  EditorViewModel.ts     |     100 |      100 |     100 |     100 | 
+ src/models              |      80 |      100 |   84.61 |   76.47 | 
+  ClipModel.ts           |     100 |      100 |     100 |     100 | 
+  ClipService.ts         |      50 |      100 |      50 |      50 | 30,35-44
+ src/utils               |   72.58 |       50 |      64 |   74.07 | 
+  ClipUtils.ts           |     100 |      100 |     100 |     100 | 
+  functional.ts          |   58.53 |    41.66 |   43.75 |   61.11 | 3,31,42-49,55-64 
+-------------------------|---------|----------|---------|---------|-------------------
+
+Test Suites: 5 passed, 5 total
+Tests:       26 passed, 26 total
+Snapshots:   0 total
+Time:        3.409 s
+Ran all test suites.

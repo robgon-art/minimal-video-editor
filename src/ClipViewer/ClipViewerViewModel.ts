@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Clip, selectClipById } from '../models/ClipModel';
-import { fetchClips, createClip } from '../models/ClipService';
+import { Clip, selectClipById, addClips } from '../Clip/ClipModel';
+import { scanMediaFolder, importMediaFiles } from '../Clip/MediaScanner';
 
 // Props for the ClipViewer view
 export interface ClipViewerViewProps {
@@ -8,7 +8,7 @@ export interface ClipViewerViewProps {
     isLoading: boolean;
     errorMessage: string | null;
     onClipClick: (id: string) => void;
-    onAddClip: () => void;
+    onAddClips: () => void;
 }
 
 // Pure transformation function for state to props
@@ -17,13 +17,13 @@ export const createClipViewerProps = (
     isLoading: boolean,
     errorMessage: string | null,
     onClipClick: (id: string) => void,
-    onAddClip: () => void
+    onAddClips: () => void
 ): ClipViewerViewProps => ({
     clips,
     isLoading,
     errorMessage,
     onClipClick,
-    onAddClip
+    onAddClips
 });
 
 // ViewModel hook
@@ -33,16 +33,16 @@ export const useClipViewerViewModel = () => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    // Load clips on mount
+    // Load clips on mount by scanning the media folder
     useEffect(() => {
         const loadClips = async () => {
             try {
                 setIsLoading(true);
-                const loadedClips = await fetchClips();
+                const loadedClips = await scanMediaFolder();
                 setClips(loadedClips);
                 setErrorMessage(null);
             } catch (error) {
-                setErrorMessage('Failed to load clips');
+                setErrorMessage('Failed to load clips from media folder');
             } finally {
                 setIsLoading(false);
             }
@@ -51,24 +51,57 @@ export const useClipViewerViewModel = () => {
         loadClips();
     }, []);
 
-    // Handler for click events
+    // Handler for clip selection
     const handleClipClick = useCallback((id: string) => {
         setClips(currentClips => selectClipById(currentClips, id));
     }, []);
 
-    // Handler for adding a new clip
-    const handleAddClip = useCallback(async () => {
+    // Handler for adding new clips via file dialog
+    const handleAddClips = useCallback(async () => {
         try {
-            setIsLoading(true);
-            const newClip = await createClip(`New Clip ${clips.length + 1}`);
-            setClips(currentClips => [...currentClips, newClip]);
-            setErrorMessage(null);
+            // Create a file input element
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.multiple = true;
+            fileInput.accept = 'video/*';
+            
+            // When files are selected
+            fileInput.onchange = async (event) => {
+                try {
+                    const target = event.target as HTMLInputElement;
+                    if (!target.files || target.files.length === 0) {
+                        return;
+                    }
+                    
+                    setIsLoading(true);
+                    
+                    // Convert FileList to array of file paths
+                    const filePaths = Array.from(target.files).map(file => 
+                        URL.createObjectURL(file)
+                    );
+                    
+                    // Import the media files
+                    const newClips = await importMediaFiles(filePaths);
+                    
+                    // Add the new clips to state
+                    setClips(currentClips => addClips(currentClips, newClips));
+                    setErrorMessage(null);
+                } catch (error) {
+                    setErrorMessage('Failed to add clips');
+                    console.error('Error adding clips:', error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            
+            // Trigger the file dialog
+            fileInput.click();
+            
         } catch (error) {
-            setErrorMessage('Failed to add clip');
-        } finally {
-            setIsLoading(false);
+            setErrorMessage('Failed to open file dialog');
+            console.error('Error opening file dialog:', error);
         }
-    }, [clips.length]);
+    }, []);
 
     // Create view props (memoized)
     return useMemo(() =>
@@ -77,8 +110,8 @@ export const useClipViewerViewModel = () => {
             isLoading,
             errorMessage,
             handleClipClick,
-            handleAddClip
+            handleAddClips
         ),
-        [clips, isLoading, errorMessage, handleClipClick, handleAddClip]
+        [clips, isLoading, errorMessage, handleClipClick, handleAddClips]
     );
 }; 

@@ -9,7 +9,7 @@ const ClipViewerView: React.FC<ClipViewerViewProps> = ({
     isLoading,
     errorMessage,
     onClipClick,
-    onAddClip
+    onAddClips
 }) => {
     // Use ClipList view model to prepare props for the ClipList component
     const clipListProps = useClipListViewModel(clips, onClipClick);
@@ -19,12 +19,12 @@ const ClipViewerView: React.FC<ClipViewerViewProps> = ({
             <div className="clip-viewer-header">
                 <h2>Video Clips</h2>
                 <button
-                    className="add-clip-button"
-                    onClick={onAddClip}
+                    className="add-clips-button"
+                    onClick={onAddClips}
                     disabled={isLoading}
-                    data-testid="add-clip-button"
+                    data-testid="add-clips-button"
                 >
-                    Add Clip
+                    Add Clips
                 </button>
             </div>
 
