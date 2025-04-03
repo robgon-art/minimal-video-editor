@@ -64,7 +64,7 @@ export const useClipViewerViewModel = () => {
             fileInput.type = 'file';
             fileInput.multiple = true;
             fileInput.accept = 'video/*';
-            
+
             // When files are selected
             fileInput.onchange = async (event) => {
                 try {
@@ -72,15 +72,15 @@ export const useClipViewerViewModel = () => {
                     if (!target.files || target.files.length === 0) {
                         return;
                     }
-                    
+
                     setIsLoading(true);
-                    
+
                     // Pass File objects directly instead of creating blob URLs
                     const files = Array.from(target.files);
-                    
+
                     // Import the media files
                     const newClips = await importMediaFiles(files);
-                    
+
                     // Add the new clips to state
                     setClips(currentClips => addClips(currentClips, newClips));
                     setErrorMessage(null);
@@ -91,10 +91,10 @@ export const useClipViewerViewModel = () => {
                     setIsLoading(false);
                 }
             };
-            
+
             // Trigger the file dialog
             fileInput.click();
-            
+
         } catch (error) {
             setErrorMessage('Failed to open file dialog');
             console.error('Error opening file dialog:', error);

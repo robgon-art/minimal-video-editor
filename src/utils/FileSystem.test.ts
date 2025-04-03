@@ -1,76 +1,74 @@
-import { MockFileSystem } from './FileSystem';
+import { mockFileSystem } from './FileSystem.mock';
+import {
+  createListOperation,
+  createReadOperation,
+  OperationType
+} from './StorageOperations';
 
-// Instead of testing the FileSystem integration with real browser APIs,
-// we'll test the MockFileSystem implementation which we control
-describe('MockFileSystem', () => {
-  let mockFileSystem: MockFileSystem;
-
+// Test the mock storage adapter implementation
+describe('MockStorageAdapter', () => {
   beforeEach(() => {
-    mockFileSystem = new MockFileSystem();
+    // Reset the mock if needed
   });
 
-  describe('readDirectory', () => {
+  describe('LIST operations', () => {
     it('returns files from the specified directory', async () => {
-      const files = await mockFileSystem.readDirectory('/media');
+      const listOperation = createListOperation('/media');
+      const files = await mockFileSystem.executeOperation(listOperation);
+
       expect(files).toContain('/media/sample1.mp4');
       expect(files).toContain('/media/sample2.mov');
       expect(files).toContain('/media/sample3.avi');
     });
 
     it('returns empty array for directory with no matching files', async () => {
-      const files = await mockFileSystem.readDirectory('/nonexistent');
+      const listOperation = createListOperation('/nonexistent');
+      const files = await mockFileSystem.executeOperation(listOperation);
+
       expect(files).toEqual([]);
     });
   });
 
-  describe('getFileMetadata', () => {
-    it('returns metadata for existing files', async () => {
-      const metadata = await mockFileSystem.getFileMetadata('/media/sample1.mp4');
-      expect(metadata).toHaveProperty('size');
-      expect(metadata).toHaveProperty('lastModified');
-      expect(metadata).toHaveProperty('durationInSeconds', 30);
+  describe('READ operations', () => {
+    it('returns data and metadata for existing files', async () => {
+      const readOperation = createReadOperation('/media/sample1.mp4');
+      const result = await mockFileSystem.executeOperation(readOperation);
+
+      expect(result).toHaveProperty('data');
+      expect(result).toHaveProperty('metadata');
+      expect(result.metadata).toHaveProperty('size');
+      expect(result.metadata).toHaveProperty('lastModified');
+      expect(result.metadata).toHaveProperty('durationInSeconds', 30);
     });
 
     it('throws error for non-existent files', async () => {
+      const readOperation = createReadOperation('/nonexistent/file.mp4');
+
       await expect(
-        mockFileSystem.getFileMetadata('/nonexistent/file.mp4')
+        mockFileSystem.executeOperation(readOperation)
       ).rejects.toThrow('File not found');
     });
   });
 
-  describe('copyFile', () => {
-    it('copies file to new location', async () => {
-      const result = await mockFileSystem.copyFile('/media/sample1.mp4', '/newlocation/sample1.mp4');
-      expect(result).toBe(true);
-      
-      // Verify the file exists at the new location
-      const metadata = await mockFileSystem.getFileMetadata('/newlocation/sample1.mp4');
-      expect(metadata).toHaveProperty('durationInSeconds', 30);
-    });
+  describe('WRITE operations', () => {
+    it('writes file data and returns true', async () => {
+      const writeOperation = {
+        type: OperationType.WRITE,
+        path: '/test/newfile.mp4',
+        data: new ArrayBuffer(10)
+      };
 
-    it('returns false when source file does not exist', async () => {
-      const result = await mockFileSystem.copyFile('/nonexistent/file.mp4', '/newlocation/file.mp4');
-      expect(result).toBe(false);
+      const result = await mockFileSystem.executeOperation(writeOperation);
+      expect(result).toBe(true);
+
+      // Verify the file exists at the new location
+      const readOperation = createReadOperation('/test/newfile.mp4');
+      const fileData = await mockFileSystem.executeOperation(readOperation);
+      expect(fileData).toHaveProperty('metadata.durationInSeconds', 30);
     });
   });
 
-  describe('executeOperation', () => {
-    it('handles READ_DIRECTORY operations', async () => {
-      const files = await mockFileSystem.executeOperation({
-        type: 'READ_DIRECTORY',
-        directoryPath: '/media'
-      });
-      expect(files).toContain('/media/sample1.mp4');
-    });
-
-    it('handles GET_FILE_METADATA operations', async () => {
-      const metadata = await mockFileSystem.executeOperation({
-        type: 'GET_FILE_METADATA',
-        filePath: '/media/sample1.mp4'
-      });
-      expect(metadata).toHaveProperty('durationInSeconds', 30);
-    });
-
+  describe('unsupported operations', () => {
     it('throws for unsupported operations', async () => {
       await expect(
         mockFileSystem.executeOperation({ type: 'UNSUPPORTED' } as any)

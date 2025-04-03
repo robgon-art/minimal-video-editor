@@ -1,125 +1,145 @@
-import { scanMediaFolder, importMediaFiles, MEDIA_FOLDER_PATH } from './MediaScanner';
-import { MockFileSystem } from './FileSystem.mock';
-import * as FileSystemModule from './FileSystem';
-import * as MediaScannerModule from './MediaScanner';
-import { Clip } from '../Clip/ClipModel';
+import { scanMediaFolder, importMediaFiles, MEDIA_FOLDER_PATH } from '../utils/MediaScanner';
+import { Operation, OperationType } from '../utils/StorageOperations';
+import { MediaMetadata } from './MediaMetadata';
 
-// Mock the entire FileSystem module
-jest.mock('./FileSystem', () => {
-  // Create a MockFileSystem instance for testing
-  const mockFileSystem = new (require('./FileSystem.mock').MockFileSystem)();
-  
-  return {
-    fileSystem: mockFileSystem
-  };
-});
+// Mock the modules
+jest.mock('./FileSystem');
+jest.mock('./IOEffects');
+jest.mock('uuid', () => ({
+  v4: () => 'mock-uuid'
+}));
+
+// Import the mocked modules
+import { fileSystem } from './FileSystem';
+import { executeOperation, executeWriteWithMetadata } from './IOEffects';
 
 describe('MediaScanner', () => {
-  let mockFileSystem: MockFileSystem;
-  let importMediaFilesSpy: jest.SpyInstance;
-  
+  // Reset all mocks before each test
   beforeEach(() => {
-    // Get the mocked fileSystem and reset it before each test
-    mockFileSystem = FileSystemModule.fileSystem as unknown as MockFileSystem;
-    mockFileSystem.reset();
-    
-    // Mock the importMediaFiles function using spyOn
-    importMediaFilesSpy = jest.spyOn(MediaScannerModule, 'importMediaFiles').mockImplementation(
-      (files: File[]) => {
-        // Filter media files
-        const supportedFiles = files.filter(file => {
-          const fileName = file.name;
-          const extension = fileName.split('.').pop()?.toLowerCase() || '';
-          const supportedExtensions = ['mp4', 'mov', 'avi', 'webm', 'mkv'];
-          return supportedExtensions.includes(extension);
-        });
-        
-        // Create mock clips
-        const mockClips: Clip[] = supportedFiles.map(file => ({
-          id: `mock-id-${Math.random().toString(36).substring(2, 9)}`,
-          title: file.name.split('.')[0],
-          thumbnailUrl: 'mock-thumbnail-url',
-          duration: 10,
-          filePath: `${MEDIA_FOLDER_PATH}/${file.name}`
-        }));
-        
-        return Promise.resolve(mockClips);
-      }
-    );
+    jest.clearAllMocks();
   });
-  
-  afterEach(() => {
-    // Restore all mocks
-    jest.restoreAllMocks();
-  });
-  
+
   describe('scanMediaFolder', () => {
-    it('should scan the media folder and return clip objects', async () => {
-      // Call the function
-      const clips = await scanMediaFolder();
-      
-      // We expect 3 clips (not including document.txt which is not a media file)
-      expect(clips.length).toBe(3);
-      
-      // Verify the clips have the expected properties
-      clips.forEach(clip => {
-        expect(clip.id).toBeDefined();
-        expect(clip.title).toBeDefined();
-        expect(clip.thumbnailUrl).toBeDefined();
-        expect(typeof clip.duration).toBe('number');
-        expect(clip.filePath).toContain('/media/');
+    it('should return clips for media files in the media folder', async () => {
+      // Setup the mock for executeOperation
+      (executeOperation as jest.Mock).mockImplementation((adapter, operation) => {
+        if (operation.type === 'LIST') {
+          return Promise.resolve([
+            '/media/sample1.mp4',
+            '/media/sample2.mov',
+            '/media/sample3.avi',
+            '/media/document.txt'
+          ]);
+        } else if (operation.type === 'READ') {
+          return Promise.resolve({
+            metadata: {
+              size: 1024,
+              lastModified: new Date(),
+              durationInSeconds: 60
+            }
+          });
+        }
+        return Promise.resolve(null);
       });
+
+      const clips = await scanMediaFolder();
+
+      // Should return 3 clips (for video files only)
+      expect(clips.length).toBe(3);
+
+      // First clip should have these properties
+      expect(clips[0].id).toBe('mock-uuid');
+      expect(clips[0].filePath).toBe('/media/sample1.mp4');
+      expect(clips[0].duration).toBe(60);
+    });
+
+    it('should return empty array if no media files found', async () => {
+      // Mock to return empty array
+      (executeOperation as jest.Mock).mockImplementation((adapter, operation) => {
+        if (operation.type === 'LIST') {
+          return Promise.resolve([]);
+        }
+        return Promise.resolve(null);
+      });
+
+      const clips = await scanMediaFolder();
+
+      expect(clips).toEqual([]);
+      expect(clips.length).toBe(0);
+    });
+
+    it('should return empty array on error', async () => {
+      // Temporarily mock console.error to suppress output in tests
+      const originalConsoleError = console.error;
+      console.error = jest.fn();
       
-      // Check that we have the expected media files
-      const titles = clips.map(clip => clip.title);
-      expect(titles).toContain('sample1');
-      expect(titles).toContain('sample2');
-      expect(titles).toContain('sample3');
+      // Mock to throw an error on LIST operation
+      (executeOperation as jest.Mock).mockImplementation((adapter, operation) => {
+        if (operation.type === 'LIST') {
+          return Promise.reject(new Error('Test error'));
+        }
+        return Promise.resolve(null);
+      });
+
+      const clips = await scanMediaFolder();
+
+      // Verify behavior
+      expect(clips).toEqual([]);
+      
+      // Restore original console.error
+      console.error = originalConsoleError;
     });
   });
-  
+
   describe('importMediaFiles', () => {
-    it('should import media files and return clip objects', async () => {
-      // Create simple mock file objects
-      const filesToImport = [
-        new File([], 'video1.mp4', { type: 'video/mp4' }),
-        new File([], 'video2.mov', { type: 'video/quicktime' }),
-        new File([], 'document.txt', { type: 'text/plain' }) // Not a media file, should be ignored
-      ];
-      
-      // Call the function
-      const clips = await importMediaFiles(filesToImport);
-      
-      // We expect 2 clips (not including document.txt)
-      expect(clips.length).toBe(2);
-      
-      // Verify the clips have the expected properties
-      clips.forEach(clip => {
-        expect(clip.id).toBeDefined();
-        expect(clip.title).toBeDefined();
-        expect(clip.thumbnailUrl).toBeDefined();
-        expect(typeof clip.duration).toBe('number');
-        expect(clip.filePath).toContain(MEDIA_FOLDER_PATH);
+    it('should import media files and return clips', async () => {
+      // Setup the mock for directory creation
+      (executeOperation as jest.Mock).mockImplementation((adapter, operation) => {
+        if (operation.type === 'CREATE_DIRECTORY') {
+          return Promise.resolve(true);
+        }
+        return Promise.resolve(null);
       });
-      
-      // Check that we have the expected media files
-      const titles = clips.map(clip => clip.title);
-      expect(titles).toContain('video1');
-      expect(titles).toContain('video2');
-    });
-    
-    it('should return an empty array if no supported media files are provided', async () => {
-      // Non-media files to import
-      const filesToImport = [
-        new File([], 'document1.txt', { type: 'text/plain' }),
-        new File([], 'image.jpg', { type: 'image/jpeg' }),
-        new File([], 'spreadsheet.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+
+      // Setup the mock for metadata extraction
+      (executeWriteWithMetadata as jest.Mock).mockImplementation(() => {
+        return Promise.resolve({
+          size: 1024,
+          lastModified: new Date(),
+          durationInSeconds: 60
+        });
+      });
+
+      // Create test files
+      const testFiles = [
+        new File(['test data'], 'video1.mp4', { type: 'video/mp4' }),
+        new File(['test data'], 'video2.mov', { type: 'video/quicktime' }),
+        new File(['test data'], 'document.txt', { type: 'text/plain' }) // Should be filtered out
       ];
-      
-      // Call the function
-      const clips = await importMediaFiles(filesToImport);
-      
-      // We expect 0 clips
+
+      // Mock File.prototype.arrayBuffer
+      const originalArrayBuffer = File.prototype.arrayBuffer;
+      File.prototype.arrayBuffer = jest.fn().mockResolvedValue(new ArrayBuffer(10));
+
+      const clips = await importMediaFiles(testFiles);
+
+      // Should return 2 clips (for video files only)
+      expect(clips.length).toBe(2);
+
+      // Restore mocks
+      File.prototype.arrayBuffer = originalArrayBuffer;
+    });
+
+    it('should return empty array if no supported files', async () => {
+      // Create test files with no supported types
+      const testFiles = [
+        new File(['test data'], 'document1.txt', { type: 'text/plain' }),
+        new File(['test data'], 'document2.pdf', { type: 'application/pdf' })
+      ];
+
+      const clips = await importMediaFiles(testFiles);
+
+      expect(clips).toEqual([]);
       expect(clips.length).toBe(0);
     });
   });

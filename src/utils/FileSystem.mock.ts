@@ -1,111 +1,113 @@
-import { IFileSystem } from './FileSystem';
-import { FileOperation } from './FileOperations';
+/**
+ * Mock implementation of storage adapter for testing
+ */
+import { 
+  Operation, 
+  OperationType, 
+  WriteOperation,
+  ReadOperation,
+  ListOperation,
+  DeleteOperation,
+  CreateDirectoryOperation 
+} from './StorageOperations';
+import { MediaMetadata } from './MediaMetadata';
+import { StorageAdapter } from './IOEffects';
 
-// In-memory mock implementation of FileSystem
-export class MockFileSystem implements IFileSystem {
-  private fileStore: Map<string, string> = new Map();
-  private metadata: Map<string, any> = new Map();
+/**
+ * Mock implementation of storage adapter for testing
+ */
+export class MockStorageAdapter implements StorageAdapter {
+  /**
+   * In-memory storage for files
+   */
+  private mockFiles: Map<string, {
+    data: ArrayBuffer;
+    metadata: MediaMetadata;
+  }> = new Map();
   
-  // Mock data to return
-  private mockFiles: string[] = [
-    '/media/sample1.mp4',
-    '/media/sample2.mov', 
-    '/media/sample3.avi',
-    '/media/document.txt' // Not a media file
-  ];
-  
+  /**
+   * Constructor to initialize with sample files
+   */
   constructor() {
-    // Initialize with some mock data
-    this.mockFiles.forEach(path => {
-      this.fileStore.set(path, `Mock content for ${path}`);
-      
-      // Generate mock metadata
-      const fileName = path.split(/[/\\]/).pop() || '';
-      const hash = fileName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      
-      this.metadata.set(path, {
-        size: hash * 1000,
+    // Add some sample files
+    const dummyData = new ArrayBuffer(100);
+    
+    this.mockFiles.set('/media/sample1.mp4', {
+      data: dummyData,
+      metadata: {
+        size: 1024,
         lastModified: new Date(),
-        durationInSeconds: 10 + (hash % 50) // 10-60 seconds
-      });
+        durationInSeconds: 30 
+      }
+    });
+    
+    this.mockFiles.set('/media/sample2.mov', {
+      data: dummyData,
+      metadata: {
+        size: 2048,
+        lastModified: new Date(),
+        durationInSeconds: 45
+      }
+    });
+    
+    this.mockFiles.set('/media/sample3.avi', {
+      data: dummyData,
+      metadata: {
+        size: 3072,
+        lastModified: new Date(),
+        durationInSeconds: 60
+      }
     });
   }
   
-  async executeOperation(operation: FileOperation): Promise<any> {
+  /**
+   * Execute operation
+   */
+  async executeOperation(operation: Operation): Promise<any> {
     switch (operation.type) {
-      case 'COPY_FILE':
-        return this.copyFile(operation.sourcePath, operation.destinationPath);
-      case 'READ_DIRECTORY':
-        return this.readDirectory(operation.directoryPath);
-      case 'GET_FILE_METADATA':
-        return this.getFileMetadata(operation.filePath);
+      case OperationType.READ:
+        return this.read(operation as ReadOperation);
+      case OperationType.WRITE:
+        return this.write(operation as WriteOperation);
+      case OperationType.DELETE:
+        return this.delete(operation as DeleteOperation);
+      case OperationType.LIST:
+        return this.list(operation as ListOperation);
+      case OperationType.CREATE_DIRECTORY:
+        return this.createDirectory(operation as CreateDirectoryOperation);
       default:
         throw new Error(`Unsupported operation: ${(operation as any).type}`);
     }
   }
   
-  async copyFile(sourcePath: string, destinationPath: string): Promise<boolean> {
-    // Simulate copying a file by creating an entry in the fileStore
-    const content = `Mock content for ${sourcePath}`;
-    this.fileStore.set(destinationPath, content);
+  /**
+   * Read a file
+   */
+  private async read(operation: ReadOperation): Promise<{ data: ArrayBuffer; metadata: MediaMetadata }> {
+    const file = this.mockFiles.get(operation.path);
     
-    // Also create metadata for the new file
-    const fileName = destinationPath.split(/[/\\]/).pop() || '';
-    const hash = fileName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    
-    this.metadata.set(destinationPath, {
-      size: hash * 1000,
-      lastModified: new Date(),
-      durationInSeconds: 10 + (hash % 50) // 10-60 seconds
-    });
-    
-    return true;
-  }
-  
-  async readDirectory(directoryPath: string): Promise<string[]> {
-    // Return files that start with the directoryPath
-    return this.mockFiles.filter(path => path.startsWith(directoryPath));
-  }
-  
-  async getFileMetadata(filePath: string): Promise<{ 
-    size: number; 
-    lastModified: Date;
-    durationInSeconds: number; 
-  }> {
-    // Return mock metadata for the file
-    const metadata = this.metadata.get(filePath);
-    
-    if (!metadata) {
-      // If metadata doesn't exist yet, create it
-      const fileName = filePath.split(/[/\\]/).pop() || '';
-      const hash = fileName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      
-      const newMetadata = {
-        size: hash * 1000,
-        lastModified: new Date(),
-        durationInSeconds: 10 + (hash % 50) // 10-60 seconds
-      };
-      
-      this.metadata.set(filePath, newMetadata);
-      return newMetadata;
+    if (!file) {
+      throw new Error(`File not found: ${operation.path}`);
     }
     
-    return metadata;
+    return {
+      data: file.data,
+      metadata: file.metadata
+    };
   }
   
-  async writeFile(filePath: string, data: ArrayBuffer): Promise<boolean> {
+  /**
+   * Write a file
+   */
+  private async write(operation: WriteOperation): Promise<boolean> {
     try {
-      // Simulate writing a file
-      this.fileStore.set(filePath, `Mock content for ${filePath}`);
-      
-      // Also create metadata for the new file
-      const fileName = filePath.split(/[/\\]/).pop() || '';
-      const hash = fileName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      
-      this.metadata.set(filePath, {
-        size: data instanceof ArrayBuffer ? data.byteLength : 1024,
-        lastModified: new Date(),
-        durationInSeconds: 10 + (hash % 50) // 10-60 seconds
+      this.mockFiles.set(operation.path, {
+        data: operation.data,
+        metadata: {
+          size: operation.data.byteLength,
+          lastModified: new Date(),
+          durationInSeconds: 30 // Mock duration
+        }
       });
       
       return true;
@@ -114,34 +116,57 @@ export class MockFileSystem implements IFileSystem {
       return false;
     }
   }
-
-  async createDirectory(directoryPath: string): Promise<boolean> {
-    // Mock implementation doesn't need to do anything for directories
+  
+  /**
+   * Delete a file
+   */
+  private async delete(operation: DeleteOperation): Promise<boolean> {
+    return this.mockFiles.delete(operation.path);
+  }
+  
+  /**
+   * List files in a directory
+   */
+  private async list(operation: ListOperation): Promise<string[]> {
+    return Array.from(this.mockFiles.keys())
+      .filter(path => path.startsWith(operation.path));
+  }
+  
+  /**
+   * Create directory 
+   * (This is a no-op for mock system as it doesn't have directories)
+   */
+  private async createDirectory(operation: CreateDirectoryOperation): Promise<boolean> {
     return true;
   }
   
-  // Helper method to check what files are in the store (for testing)
-  getStoredFiles(): string[] {
-    return Array.from(this.fileStore.keys());
-  }
-  
-  // Reset the mock for testing
-  reset(): void {
-    this.fileStore.clear();
-    this.metadata.clear();
+  /**
+   * Update metadata for testing
+   */
+  async updateMetadata(path: string, metadata: Partial<MediaMetadata>): Promise<boolean> {
+    const file = this.mockFiles.get(path);
     
-    // Reinitialize with mock data
-    this.mockFiles.forEach(path => {
-      this.fileStore.set(path, `Mock content for ${path}`);
-      
-      const fileName = path.split(/[/\\]/).pop() || '';
-      const hash = fileName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      
-      this.metadata.set(path, {
-        size: hash * 1000,
-        lastModified: new Date(),
-        durationInSeconds: 10 + (hash % 50) // 10-60 seconds
-      });
-    });
+    if (!file) {
+      return false;
+    }
+    
+    // Update metadata properties
+    if (metadata.durationInSeconds !== undefined) {
+      file.metadata.durationInSeconds = metadata.durationInSeconds;
+    }
+    
+    if (metadata.lastModified !== undefined) {
+      file.metadata.lastModified = metadata.lastModified;
+    }
+    
+    if (metadata.size !== undefined) {
+      file.metadata.size = metadata.size;
+    }
+    
+    this.mockFiles.set(path, file);
+    return true;
   }
-} 
+}
+
+// Export a singleton instance for testing
+export const mockFileSystem = new MockStorageAdapter(); 
