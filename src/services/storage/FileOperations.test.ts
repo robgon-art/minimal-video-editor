@@ -84,7 +84,7 @@ describe('FileOperations', () => {
 
       expect(result.id).toBeDefined(); // UUID should be generated
       expect(result.title).toBe('sample'); // Should remove extension
-      expect(result.thumbnailUrl).toBe('https://via.placeholder.com/150?text=sample.mp4');
+      expect(result.thumbnailUrl).toBe('/video_clip.png');
       expect(result.duration).toBe(30);
       expect(result.filePath).toBe('/media/sample.mp4');
     });

@@ -21,12 +21,11 @@ export const createClipFromFile = (
     fileName: string,
     durationInSeconds: number
 ): Clip => {
-    // Initially use a placeholder URL - the real thumbnail will be loaded later
-    // This allows for asynchronous thumbnail generation without blocking clip creation
+    // Use a local placeholder image instead of an external service
     return {
         id: uuidv4(),
         title: fileName.replace(/\.[^/.]+$/, ""), // Remove file extension
-        thumbnailUrl: `https://via.placeholder.com/150?text=${encodeURIComponent(fileName)}`,
+        thumbnailUrl: '/video_clip.png',
         duration: durationInSeconds,
         filePath: filePath
     };

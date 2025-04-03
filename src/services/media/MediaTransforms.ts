@@ -51,8 +51,7 @@ const isTestEnvironment = (): boolean => {
 export const createThumbnailUrl = async (filePath: string): Promise<string> => {
     // In test environment, use a placeholder directly
     if (isTestEnvironment()) {
-        const fileName = getFileName(filePath);
-        return `https://via.placeholder.com/150?text=${encodeURIComponent(fileName)}`;
+        return '/video_clip.png';
     }
 
     try {
@@ -60,9 +59,9 @@ export const createThumbnailUrl = async (filePath: string): Promise<string> => {
         const thumbnailPath = await ensureThumbnailExists(filePath);
         return thumbnailPath;
     } catch (error) {
-        // Fallback to placeholder if thumbnail creation fails
+        // Fallback to local placeholder if thumbnail creation fails
         const fileName = getFileName(filePath);
         console.error(`Error creating thumbnail for ${fileName}:`, error);
-        return `https://via.placeholder.com/150?text=${encodeURIComponent(fileName)}`;
+        return '/video_clip.png';
     }
 }; 
