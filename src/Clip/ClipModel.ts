@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from 'uuid';
+
 export interface Clip {
     id: string;
     title: string;
@@ -6,6 +8,27 @@ export interface Clip {
     selected?: boolean;
     filePath?: string; // Path to the actual media file
 }
+
+/**
+ * Creates a clip object from file metadata and path
+ * @param filePath The path to the media file
+ * @param fileName The name of the file
+ * @param durationInSeconds The duration of the media in seconds
+ * @returns A new Clip object
+ */
+export const createClipFromFile = (
+    filePath: string,
+    fileName: string,
+    durationInSeconds: number
+): Clip => {
+    return {
+        id: uuidv4(),
+        title: fileName.replace(/\.[^/.]+$/, ""), // Remove file extension
+        thumbnailUrl: `https://via.placeholder.com/150?text=${encodeURIComponent(fileName)}`,
+        duration: durationInSeconds,
+        filePath: filePath
+    };
+};
 
 // Pure functions for clip operations
 export const selectClip = (clip: Clip): Clip => ({
@@ -34,11 +57,11 @@ export const getTotalDuration = (clips: Clip[]): number =>
     clips.reduce((total, clip) => total + clip.duration, 0);
 
 // Add clip function - pure, doesn't perform side effects
-export const addClip = (clips: Clip[], clip: Clip): Clip[] => 
+export const addClip = (clips: Clip[], clip: Clip): Clip[] =>
     [...clips, clip];
 
 // Add multiple clips at once - pure, doesn't perform side effects
-export const addClips = (clips: Clip[], newClips: Clip[]): Clip[] => 
+export const addClips = (clips: Clip[], newClips: Clip[]): Clip[] =>
     [...clips, ...newClips];
 
 // Function to check if a clip with the same name already exists

@@ -1,8 +1,7 @@
-import { v4 as uuidv4 } from 'uuid';
-import { Clip } from '../Clip/ClipModel';
+import { Clip, createClipFromFile } from '../Clip/ClipModel';
 
 // Types for file operations
-export type FileOperation = 
+export type FileOperation =
   | { type: 'COPY_FILE'; sourcePath: string; destinationPath: string }
   | { type: 'READ_DIRECTORY'; directoryPath: string }
   | { type: 'GET_FILE_METADATA'; filePath: string }
@@ -39,30 +38,15 @@ export const createCreateDirectoryOperation = (directoryPath: string): FileOpera
 
 // Function that creates operations for importing files - pure
 export const createImportFilesOperations = (
-  filePaths: string[], 
+  filePaths: string[],
   destinationFolder: string
 ): FileOperation[] => {
   return filePaths.map(filePath => {
     const fileName = filePath.split(/[/\\]/).pop() || '';
     const destinationPath = `${destinationFolder}/${fileName}`;
-    
+
     return createCopyFileOperation(filePath, destinationPath);
   });
-};
-
-// Pure function to create a clip object from file metadata
-export const createClipFromFilePath = (
-  filePath: string, 
-  fileName: string, 
-  durationInSeconds: number
-): Clip => {
-  return {
-    id: uuidv4(),
-    title: fileName.replace(/\.[^/.]+$/, ""), // Remove file extension
-    thumbnailUrl: `https://via.placeholder.com/150?text=${encodeURIComponent(fileName)}`,
-    duration: durationInSeconds,
-    filePath: filePath
-  };
 };
 
 // Helper function to extract file extension - pure

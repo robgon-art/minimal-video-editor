@@ -1,9 +1,9 @@
 import {
-    fileToClip,
     filterSupportedFiles,
     createThumbnailUrl
 } from './MediaTransforms';
 import { MediaMetadata } from './MediaMetadata';
+import { createClipFromFile } from '../Clip/ClipModel';
 
 // Mock uuid to return a predictable value for testing
 jest.mock('uuid', () => ({
@@ -11,13 +11,13 @@ jest.mock('uuid', () => ({
 }));
 
 describe('MediaTransforms', () => {
-    describe('fileToClip', () => {
+    describe('createClipFromFile', () => {
         it('should create a clip object with the correct properties', () => {
             const filePath = '/media/video.mp4';
             const fileName = 'video.mp4';
             const duration = 60;
 
-            const clip = fileToClip(filePath, fileName, duration);
+            const clip = createClipFromFile(filePath, fileName, duration);
 
             expect(clip.id).toBe('mock-uuid');
             expect(clip.title).toBe('video');
@@ -27,7 +27,7 @@ describe('MediaTransforms', () => {
         });
 
         it('should remove file extension from title', () => {
-            const clip = fileToClip('/media/video.file.mp4', 'video.file.mp4', 60);
+            const clip = createClipFromFile('/media/video.file.mp4', 'video.file.mp4', 60);
             expect(clip.title).toBe('video.file');
         });
     });

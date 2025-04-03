@@ -4,20 +4,18 @@ import {
     createListOperation,
     createReadOperation,
     createWriteOperation,
-    createCreateDirectoryOperation,
-    OperationType
+    createCreateDirectoryOperation
 } from './StorageOperations';
 import {
     executeOperation,
     executeWriteWithMetadata
 } from './IOEffects';
 import {
-    fileToClip,
     filterSupportedFiles,
     mapPathsToClips
 } from './MediaTransforms';
 import { getFileExtension } from './PathUtils';
-import { Clip } from '../Clip/ClipModel';
+import { Clip, createClipFromFile } from '../Clip/ClipModel';
 
 // Constants
 export const MEDIA_FOLDER_PATH = '/media';
@@ -82,7 +80,7 @@ export const importMediaFiles = async (files: File[]): Promise<Clip[]> => {
             const metadata = await executeWriteWithMetadata(fileSystem, writeOperation);
 
             // Create a clip object
-            return fileToClip(
+            return createClipFromFile(
                 destinationPath,
                 fileName,
                 metadata.durationInSeconds

@@ -1,3 +1,46 @@
+Thursday, April 3, 2025 12:01:31 PM
+-------------------------|---------|----------|---------|---------|-----------------------
+File                     | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s     
+-------------------------|---------|----------|---------|---------|-----------------------
+All files                |   53.11 |    43.47 |   60.64 |   52.24 |                       
+ src                     |   21.42 |        0 |   33.33 |   21.42 |                       
+  App.tsx                |     100 |      100 |     100 |     100 |                       
+  index.tsx              |       0 |      100 |     100 |       0 | 7-20                  
+  reportWebVitals.ts     |       0 |        0 |       0 |       0 | 3-10                  
+ src/Clip                |     100 |      100 |     100 |     100 |                       
+  ClipModel.ts           |     100 |      100 |     100 |     100 |                       
+  ClipUtils.ts           |     100 |      100 |     100 |     100 |                       
+  ClipView.tsx           |     100 |      100 |     100 |     100 |                       
+  ClipViewModel.ts       |     100 |      100 |     100 |     100 |                       
+ src/ClipList            |     100 |      100 |     100 |     100 | 
+  ClipListView.tsx       |     100 |      100 |     100 |     100 | 
+  ClipListViewModel.ts   |     100 |      100 |     100 |     100 | 
+ src/ClipViewer          |    6.38 |       25 |    9.09 |    6.66 | 
+  ClipViewerView.tsx     |     100 |       50 |     100 |     100 | 31-37
+  ClipViewerViewModel.ts |       0 |        0 |       0 |       0 | 15-106
+ src/Editor              |     100 |      100 |     100 |     100 | 
+  EditorView.tsx         |     100 |      100 |     100 |     100 | 
+  EditorViewModel.ts     |     100 |      100 |     100 |     100 | 
+ src/models              |     100 |      100 |     100 |     100 | 
+  ClipModel.ts           |     100 |      100 |     100 |     100 | 
+ src/utils               |   48.41 |       40 |   47.87 |   48.97 | 
+  FileOperations.ts      |    90.9 |       75 |   77.77 |     100 | 45
+  FileSystem.mock.ts     |   54.05 |     37.5 |   66.66 |   54.05 | 73,77,115-124,140-167
+  FileSystem.ts          |    3.77 |        0 |       0 |    4.12 | 26-237
+  IOEffects.ts           |      12 |      100 |       0 |      12 | 26-47,59-63,75-81    
+  MediaMetadata.ts       |     100 |    83.33 |     100 |     100 | 19
+  MediaScanner.ts        |   91.42 |      100 |     100 |   91.42 | 93-94,105
+  MediaTransforms.ts     |     100 |       50 |     100 |     100 | 17
+  PathUtils.ts           |     100 |      100 |     100 |     100 | 
+  StorageOperations.ts   |     100 |      100 |     100 |     100 | 
+  functional.ts          |   58.53 |    41.66 |   43.75 |   61.11 | 3,31,42-49,55-64     
+-------------------------|---------|----------|---------|---------|-----------------------
+Test Suites: 13 passed, 13 total
+Tests:       93 passed, 93 total
+Snapshots:   0 total
+Time:        4.159 s
+Ran all test suites.
+
 Thursday, April 3, 2025 10:21:27 AM
 -------------------------|---------|----------|---------|---------|------------------------------------
 File                     | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
