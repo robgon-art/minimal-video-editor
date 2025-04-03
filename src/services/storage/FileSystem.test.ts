@@ -1,4 +1,4 @@
-import { mockFileSystem } from './FileSystem.mock';
+import { mockFileSystem } from '../../infrastructure/fileSystem/FileSystem.mock';
 import {
   createListOperation,
   createReadOperation,

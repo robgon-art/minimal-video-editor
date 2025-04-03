@@ -1,17 +1,17 @@
-import { scanMediaFolder, importMediaFiles, MEDIA_FOLDER_PATH } from '../utils/MediaScanner';
-import { Operation, OperationType } from '../utils/StorageOperations';
+import { scanMediaFolder, importMediaFiles, MEDIA_FOLDER_PATH } from './MediaScanner';
+import { Operation, OperationType } from '../storage/StorageOperations';
 import { MediaMetadata } from './MediaMetadata';
 
 // Mock the modules
-jest.mock('./FileSystem');
-jest.mock('./IOEffects');
+jest.mock('../storage/FileSystem');
+jest.mock('../../infrastructure/io/IOEffects');
 jest.mock('uuid', () => ({
   v4: () => 'mock-uuid'
 }));
 
 // Import the mocked modules
-import { fileSystem } from './FileSystem';
-import { executeOperation, executeWriteWithMetadata } from './IOEffects';
+import { fileSystem } from '../storage/FileSystem';
+import { executeOperation, executeWriteWithMetadata } from '../../infrastructure/io/IOEffects';
 
 describe('MediaScanner', () => {
   // Reset all mocks before each test

@@ -2,8 +2,8 @@
  * Pure transformations for media objects
  */
 import { MediaMetadata } from './MediaMetadata';
-import { getFileName } from './PathUtils';
-import { Clip, createClipFromFile } from '../Clip/ClipModel';
+import { getFileName } from '../../utils/path/PathUtils';
+import { Clip, createClipFromFile } from '../../Clip/ClipModel';
 
 /**
  * Filters an array of files to only include supported media types

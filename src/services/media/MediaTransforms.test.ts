@@ -3,7 +3,7 @@ import {
     createThumbnailUrl
 } from './MediaTransforms';
 import { MediaMetadata } from './MediaMetadata';
-import { createClipFromFile } from '../Clip/ClipModel';
+import { createClipFromFile } from '../../Clip/ClipModel';
 
 // Mock uuid to return a predictable value for testing
 jest.mock('uuid', () => ({

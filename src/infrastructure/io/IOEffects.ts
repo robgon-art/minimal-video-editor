@@ -9,8 +9,8 @@ import {
     ListOperation,
     DeleteOperation,
     CreateDirectoryOperation
-} from './StorageOperations';
-import { MediaMetadata } from './MediaMetadata';
+} from '../../services/storage/StorageOperations';
+import { MediaMetadata } from '../../services/media/MediaMetadata';
 
 /**
  * Interface for storage adapters that can execute operations

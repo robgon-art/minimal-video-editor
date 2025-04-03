@@ -1,4 +1,4 @@
-import { Clip, createClipFromFile } from '../Clip/ClipModel';
+import { Clip, createClipFromFile } from '../../Clip/ClipModel';
 
 // Types for file operations
 export type FileOperation =

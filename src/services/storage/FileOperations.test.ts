@@ -6,7 +6,7 @@ import {
   getFileExtension,
   isSupportedMediaType
 } from './FileOperations';
-import { createClipFromFile } from '../Clip/ClipModel';
+import { createClipFromFile } from '../../Clip/ClipModel';
 
 describe('FileOperations', () => {
   describe('createCopyFileOperation', () => {

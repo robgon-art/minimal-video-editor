@@ -1,17 +1,17 @@
 /**
  * Mock implementation of storage adapter for testing
  */
-import { 
-  Operation, 
-  OperationType, 
+import {
+  Operation,
+  OperationType,
   WriteOperation,
   ReadOperation,
   ListOperation,
   DeleteOperation,
-  CreateDirectoryOperation 
-} from './StorageOperations';
-import { MediaMetadata } from './MediaMetadata';
-import { StorageAdapter } from './IOEffects';
+  CreateDirectoryOperation
+} from '../../services/storage/StorageOperations';
+import { MediaMetadata } from '../../services/media/MediaMetadata';
+import { StorageAdapter } from '../io/IOEffects';
 
 /**
  * Mock implementation of storage adapter for testing

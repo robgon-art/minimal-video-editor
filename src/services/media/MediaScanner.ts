@@ -1,21 +1,21 @@
-import { fileSystem } from './FileSystem';
+import { fileSystem } from '../storage/FileSystem';
 import { SUPPORTED_EXTENSIONS, MediaMetadata } from './MediaMetadata';
 import {
     createListOperation,
     createReadOperation,
     createWriteOperation,
     createCreateDirectoryOperation
-} from './StorageOperations';
+} from '../storage/StorageOperations';
 import {
     executeOperation,
     executeWriteWithMetadata
-} from './IOEffects';
+} from '../../infrastructure/io/IOEffects';
 import {
     filterSupportedFiles,
     mapPathsToClips
 } from './MediaTransforms';
-import { getFileExtension } from './PathUtils';
-import { Clip, createClipFromFile } from '../Clip/ClipModel';
+import { getFileExtension } from '../../utils/path/PathUtils';
+import { Clip, createClipFromFile } from '../../Clip/ClipModel';
 
 // Constants
 export const MEDIA_FOLDER_PATH = '/media';

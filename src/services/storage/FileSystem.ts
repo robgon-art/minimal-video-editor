@@ -7,9 +7,9 @@ import {
   DeleteOperation,
   CreateDirectoryOperation
 } from './StorageOperations';
-import { MediaMetadata } from './MediaMetadata';
-import { StorageAdapter } from './IOEffects';
-import { splitPath } from './PathUtils';
+import { MediaMetadata } from '../media/MediaMetadata';
+import { StorageAdapter } from '../../infrastructure/io/IOEffects';
+import { splitPath } from '../../utils/path/PathUtils';
 
 /**
  * IndexedDB-based implementation of storage adapter
