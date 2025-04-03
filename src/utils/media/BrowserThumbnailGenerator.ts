@@ -101,8 +101,13 @@ export const generateThumbnail = async (videoPath: string, outputPath: string): 
                         console.log('Video seeked successfully, capturing frame...');
                         // Create canvas to draw the video frame
                         const canvas = document.createElement('canvas');
-                        canvas.width = 320;
-                        canvas.height = 240;
+                        const targetWidth = 320;
+                        // Calculate height based on video's aspect ratio
+                        const aspectRatio = video.videoWidth / video.videoHeight;
+                        const targetHeight = Math.round(targetWidth / aspectRatio);
+                        
+                        canvas.width = targetWidth;
+                        canvas.height = targetHeight;
                         const ctx = canvas.getContext('2d');
 
                         if (!ctx) {

@@ -128,8 +128,8 @@ body {
 }
 
 .clip-thumbnail {
-  width: 60px;
-  height: 60px;
+  width: 120px;
+  height: auto;
   margin-right: 1rem;
   overflow: hidden;
   border-radius: 4px;
@@ -137,8 +137,9 @@ body {
 
 .clip-thumbnail img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  display: block;
+  object-fit: contain;
 }
 
 .clip-title {
