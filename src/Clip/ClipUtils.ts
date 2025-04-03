@@ -1,5 +1,5 @@
 import { Clip, selectClip, updateClipTitle } from '../models/ClipModel';
-import { pipe, evolve, memoize } from './functional';
+import { pipe, evolve, memoize } from '../utils/functional';
 
 // Functional transformations that can be composed
 const truncateTitle = (title: string): string => {

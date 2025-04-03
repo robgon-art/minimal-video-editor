@@ -5,7 +5,7 @@ import {
   createClipFromFilePath, 
   isSupportedMediaType 
 } from './FileOperations';
-import { Clip } from './ClipModel';
+import { Clip } from '../Clip/ClipModel';
 
 // Constants
 export const MEDIA_FOLDER_PATH = '/media';

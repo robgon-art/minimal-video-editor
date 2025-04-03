@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Clip } from './ClipModel';
+import { Clip } from '../Clip/ClipModel';
 
 // Types for file operations
 export type FileOperation = 

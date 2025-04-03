@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Clip, selectClipById, addClips } from '../Clip/ClipModel';
-import { scanMediaFolder, importMediaFiles } from '../Clip/MediaScanner';
+import { scanMediaFolder, importMediaFiles } from '../utils/MediaScanner';
 
 // Props for the ClipViewer view
 export interface ClipViewerViewProps {
