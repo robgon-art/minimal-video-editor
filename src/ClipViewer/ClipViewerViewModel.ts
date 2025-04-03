@@ -75,13 +75,11 @@ export const useClipViewerViewModel = () => {
                     
                     setIsLoading(true);
                     
-                    // Convert FileList to array of file paths
-                    const filePaths = Array.from(target.files).map(file => 
-                        URL.createObjectURL(file)
-                    );
+                    // Pass File objects directly instead of creating blob URLs
+                    const files = Array.from(target.files);
                     
                     // Import the media files
-                    const newClips = await importMediaFiles(filePaths);
+                    const newClips = await importMediaFiles(files);
                     
                     // Add the new clips to state
                     setClips(currentClips => addClips(currentClips, newClips));

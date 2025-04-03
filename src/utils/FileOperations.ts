@@ -5,9 +5,11 @@ import { Clip } from '../Clip/ClipModel';
 export type FileOperation = 
   | { type: 'COPY_FILE'; sourcePath: string; destinationPath: string }
   | { type: 'READ_DIRECTORY'; directoryPath: string }
-  | { type: 'GET_FILE_METADATA'; filePath: string };
+  | { type: 'GET_FILE_METADATA'; filePath: string }
+  | { type: 'WRITE_FILE'; filePath: string; data: ArrayBuffer }
+  | { type: 'CREATE_DIRECTORY'; directoryPath: string };
 
-// Function to create file operation objects - pure
+// Factory functions for file operations
 export const createCopyFileOperation = (sourcePath: string, destinationPath: string): FileOperation => ({
   type: 'COPY_FILE',
   sourcePath,
@@ -22,6 +24,17 @@ export const createReadDirectoryOperation = (directoryPath: string): FileOperati
 export const createGetFileMetadataOperation = (filePath: string): FileOperation => ({
   type: 'GET_FILE_METADATA',
   filePath
+});
+
+export const createWriteFileOperation = (filePath: string, data: ArrayBuffer): FileOperation => ({
+  type: 'WRITE_FILE',
+  filePath,
+  data
+});
+
+export const createCreateDirectoryOperation = (directoryPath: string): FileOperation => ({
+  type: 'CREATE_DIRECTORY',
+  directoryPath
 });
 
 // Function that creates operations for importing files - pure

@@ -93,6 +93,33 @@ export class MockFileSystem implements IFileSystem {
     return metadata;
   }
   
+  async writeFile(filePath: string, data: ArrayBuffer): Promise<boolean> {
+    try {
+      // Simulate writing a file
+      this.fileStore.set(filePath, `Mock content for ${filePath}`);
+      
+      // Also create metadata for the new file
+      const fileName = filePath.split(/[/\\]/).pop() || '';
+      const hash = fileName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      
+      this.metadata.set(filePath, {
+        size: data instanceof ArrayBuffer ? data.byteLength : 1024,
+        lastModified: new Date(),
+        durationInSeconds: 10 + (hash % 50) // 10-60 seconds
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error writing file:', error);
+      return false;
+    }
+  }
+
+  async createDirectory(directoryPath: string): Promise<boolean> {
+    // Mock implementation doesn't need to do anything for directories
+    return true;
+  }
+  
   // Helper method to check what files are in the store (for testing)
   getStoredFiles(): string[] {
     return Array.from(this.fileStore.keys());

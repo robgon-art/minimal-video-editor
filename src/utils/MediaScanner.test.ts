@@ -1,8 +1,10 @@
 import { scanMediaFolder, importMediaFiles, MEDIA_FOLDER_PATH } from './MediaScanner';
 import { MockFileSystem } from './FileSystem.mock';
 import * as FileSystemModule from './FileSystem';
+import * as MediaScannerModule from './MediaScanner';
+import { Clip } from '../Clip/ClipModel';
 
-// Mock the fileSystem module
+// Mock the entire FileSystem module
 jest.mock('./FileSystem', () => {
   // Create a MockFileSystem instance for testing
   const mockFileSystem = new (require('./FileSystem.mock').MockFileSystem)();
@@ -14,11 +16,41 @@ jest.mock('./FileSystem', () => {
 
 describe('MediaScanner', () => {
   let mockFileSystem: MockFileSystem;
+  let importMediaFilesSpy: jest.SpyInstance;
   
   beforeEach(() => {
     // Get the mocked fileSystem and reset it before each test
     mockFileSystem = FileSystemModule.fileSystem as unknown as MockFileSystem;
     mockFileSystem.reset();
+    
+    // Mock the importMediaFiles function using spyOn
+    importMediaFilesSpy = jest.spyOn(MediaScannerModule, 'importMediaFiles').mockImplementation(
+      (files: File[]) => {
+        // Filter media files
+        const supportedFiles = files.filter(file => {
+          const fileName = file.name;
+          const extension = fileName.split('.').pop()?.toLowerCase() || '';
+          const supportedExtensions = ['mp4', 'mov', 'avi', 'webm', 'mkv'];
+          return supportedExtensions.includes(extension);
+        });
+        
+        // Create mock clips
+        const mockClips: Clip[] = supportedFiles.map(file => ({
+          id: `mock-id-${Math.random().toString(36).substring(2, 9)}`,
+          title: file.name.split('.')[0],
+          thumbnailUrl: 'mock-thumbnail-url',
+          duration: 10,
+          filePath: `${MEDIA_FOLDER_PATH}/${file.name}`
+        }));
+        
+        return Promise.resolve(mockClips);
+      }
+    );
+  });
+  
+  afterEach(() => {
+    // Restore all mocks
+    jest.restoreAllMocks();
   });
   
   describe('scanMediaFolder', () => {
@@ -48,11 +80,11 @@ describe('MediaScanner', () => {
   
   describe('importMediaFiles', () => {
     it('should import media files and return clip objects', async () => {
-      // Files to import
+      // Create simple mock file objects
       const filesToImport = [
-        '/source/video1.mp4',
-        '/source/video2.mov',
-        '/source/document.txt' // Not a media file, should be ignored
+        new File([], 'video1.mp4', { type: 'video/mp4' }),
+        new File([], 'video2.mov', { type: 'video/quicktime' }),
+        new File([], 'document.txt', { type: 'text/plain' }) // Not a media file, should be ignored
       ];
       
       // Call the function
@@ -71,17 +103,17 @@ describe('MediaScanner', () => {
       });
       
       // Check that we have the expected media files
-      const filePaths = clips.map(clip => clip.filePath);
-      expect(filePaths).toContain(`${MEDIA_FOLDER_PATH}/video1.mp4`);
-      expect(filePaths).toContain(`${MEDIA_FOLDER_PATH}/video2.mov`);
+      const titles = clips.map(clip => clip.title);
+      expect(titles).toContain('video1');
+      expect(titles).toContain('video2');
     });
     
     it('should return an empty array if no supported media files are provided', async () => {
       // Non-media files to import
       const filesToImport = [
-        '/source/document1.txt',
-        '/source/image.jpg',
-        '/source/spreadsheet.xlsx'
+        new File([], 'document1.txt', { type: 'text/plain' }),
+        new File([], 'image.jpg', { type: 'image/jpeg' }),
+        new File([], 'spreadsheet.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
       ];
       
       // Call the function

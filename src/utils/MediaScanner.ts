@@ -47,38 +47,81 @@ export const scanMediaFolder = async (): Promise<Clip[]> => {
 };
 
 // Function to import media files and return new clips
-export const importMediaFiles = async (filePaths: string[]): Promise<Clip[]> => {
+export const importMediaFiles = async (files: File[]): Promise<Clip[]> => {
   // Filter to only include supported media types
-  const supportedFilePaths = filePaths.filter(isSupportedMediaType);
+  const supportedFiles = files.filter(file => {
+    const fileName = file.name;
+    const extension = fileName.split('.').pop()?.toLowerCase() || '';
+    const supportedExtensions = ['mp4', 'mov', 'avi', 'webm', 'mkv'];
+    return supportedExtensions.includes(extension);
+  });
   
-  if (supportedFilePaths.length === 0) {
+  if (supportedFiles.length === 0) {
     return [];
   }
   
   try {
-    // Copy each file to the media folder
-    const copyPromises = supportedFilePaths.map(async (filePath: string) => {
-      const fileName = filePath.split(/[/\\]/).pop() || '';
+    // Process each file
+    const clipPromises = supportedFiles.map(async (file: File) => {
+      const fileName = file.name;
       const destinationPath = `${MEDIA_FOLDER_PATH}/${fileName}`;
       
-      // Copy the file
-      await fileSystem.copyFile(filePath, destinationPath);
+      // Save the file to the media folder
+      await saveFileToMediaFolder(file, destinationPath);
       
-      // Get metadata for the file
-      const metadata = await fileSystem.getFileMetadata(destinationPath);
+      // Create a temporary video element to get duration
+      const duration = await getVideoDuration(file);
       
       // Create a clip object
       return createClipFromFilePath(
         destinationPath,
         fileName,
-        metadata.durationInSeconds
+        duration
       );
     });
     
-    // Wait for all copy operations to complete
-    return Promise.all(copyPromises);
+    // Wait for all operations to complete
+    return Promise.all(clipPromises);
   } catch (error) {
     console.error('Error importing media files:', error);
     return [];
   }
+};
+
+// Helper function to save a File object to media folder
+const saveFileToMediaFolder = async (file: File, destinationPath: string): Promise<void> => {
+  try {
+    // Create a directory if it doesn't exist
+    await ensureMediaDirectoryExists();
+    
+    // Write the file to the media folder
+    const arrayBuffer = await file.arrayBuffer();
+    await fileSystem.writeFile(destinationPath, arrayBuffer);
+  } catch (error) {
+    console.error('Error saving file:', error);
+    throw error;
+  }
+};
+
+// Helper function to ensure the media directory exists
+const ensureMediaDirectoryExists = async (): Promise<void> => {
+  try {
+    await fileSystem.createDirectory(MEDIA_FOLDER_PATH);
+  } catch (error) {
+    // Directory might already exist, which is fine
+    console.log('Media directory check:', error);
+  }
+};
+
+// Helper function to get video duration using a video element
+const getVideoDuration = (file: File): Promise<number> => {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(video.src);
+      resolve(video.duration);
+    };
+    video.src = URL.createObjectURL(file);
+  });
 }; 

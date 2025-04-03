@@ -36,6 +36,8 @@ export interface IFileSystem {
     lastModified: Date;
     durationInSeconds: number; 
   }>;
+  writeFile: (filePath: string, data: ArrayBuffer) => Promise<boolean>;
+  createDirectory: (directoryPath: string) => Promise<boolean>;
 }
 
 // Mock implementation for testing
@@ -54,6 +56,10 @@ export class MockFileSystem implements IFileSystem {
         return this.readDirectory(operation.directoryPath);
       case 'GET_FILE_METADATA':
         return this.getFileMetadata(operation.filePath);
+      case 'WRITE_FILE':
+        return this.writeFile(operation.filePath, operation.data);
+      case 'CREATE_DIRECTORY':
+        return this.createDirectory(operation.directoryPath);
       default:
         throw new Error(`Unsupported operation: ${(operation as any).type}`);
     }
@@ -83,6 +89,26 @@ export class MockFileSystem implements IFileSystem {
     }
     throw new Error(`File not found: ${filePath}`);
   }
+
+  async writeFile(filePath: string, data: ArrayBuffer): Promise<boolean> {
+    try {
+      // Simulate writing a file by creating an entry in the mockFiles
+      this.mockFiles[filePath] = { 
+        size: data.byteLength, 
+        lastModified: new Date(), 
+        durationInSeconds: 30 // Default duration for mock files
+      };
+      return true;
+    } catch (error) {
+      console.error('Error writing file:', error);
+      return false;
+    }
+  }
+
+  async createDirectory(directoryPath: string): Promise<boolean> {
+    // Mock implementation doesn't need to do anything for directories
+    return true;
+  }
 }
 
 // Browser-based implementation of file system operations
@@ -104,6 +130,10 @@ export class BrowserFileSystem implements IFileSystem {
         return this.readDirectory(operation.directoryPath);
       case 'GET_FILE_METADATA':
         return this.getFileMetadata(operation.filePath);
+      case 'WRITE_FILE':
+        return this.writeFile(operation.filePath, operation.data);
+      case 'CREATE_DIRECTORY':
+        return this.createDirectory(operation.directoryPath);
       default:
         throw new Error(`Unsupported operation: ${(operation as any).type}`);
     }
@@ -180,6 +210,72 @@ export class BrowserFileSystem implements IFileSystem {
       console.error('Error getting file metadata:', err);
       throw err;
     }
+  }
+
+  async writeFile(filePath: string, data: ArrayBuffer): Promise<boolean> {
+    try {
+      const [dirPath, fileName] = this.splitPath(filePath);
+      
+      // Get directory handle
+      const dirHandle = await this.getDirectoryHandle(dirPath);
+      
+      // Create or open the file
+      const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+      
+      // Get a writable stream to the file
+      const writable = await fileHandle.createWritable();
+      
+      // Write the data
+      await writable.write(data);
+      
+      // Close the stream
+      await writable.close();
+      
+      return true;
+    } catch (error) {
+      console.error('Error writing file:', error);
+      return false;
+    }
+  }
+
+  async createDirectory(directoryPath: string): Promise<boolean> {
+    try {
+      // Skip the leading slash if present
+      const normalizedPath = directoryPath.startsWith('/') 
+        ? directoryPath.substring(1) 
+        : directoryPath;
+      
+      // Split the path into segments
+      const pathSegments = normalizedPath.split('/').filter(segment => segment);
+      
+      // Start with the root directory handle
+      let currentDirHandle = await navigator.storage.getDirectory();
+      
+      // Create each directory in the path if it doesn't exist
+      for (const segment of pathSegments) {
+        currentDirHandle = await currentDirHandle.getDirectoryHandle(segment, { create: true });
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error creating directory:', error);
+      return false;
+    }
+  }
+
+  // Helper method to split a path into directory path and filename
+  private splitPath(filePath: string): [string, string] {
+    const normalizedPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+    const lastSlashIndex = normalizedPath.lastIndexOf('/');
+    
+    if (lastSlashIndex === -1) {
+      return ['', normalizedPath];
+    }
+    
+    const dirPath = normalizedPath.substring(0, lastSlashIndex);
+    const fileName = normalizedPath.substring(lastSlashIndex + 1);
+    
+    return [dirPath, fileName];
   }
 }
 
