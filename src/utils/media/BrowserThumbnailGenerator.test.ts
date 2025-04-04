@@ -17,6 +17,10 @@ jest.mock('../../infrastructure/io/IOEffects', () => ({
     executeOperation: jest.fn()
 }));
 
+// Silence console logs during tests
+let originalConsoleLog: typeof console.log;
+let originalConsoleError: typeof console.error;
+
 // Helper to test browser vs non-browser environments
 const mockIsBrowser = (isBrowserValue: boolean) => {
     // Instead of modifying window.undefined, we'll mock the implementation
@@ -49,10 +53,103 @@ class MockBlob extends Blob {
     }
 }
 
+// Helper to setup common mocks for thumbnail generation tests
+function setupThumbnailMocks() {
+    // Mock canvas and video elements
+    const mockVideoElement = {
+        src: '',
+        crossOrigin: '',
+        muted: false,
+        preload: '',
+        duration: 10,
+        currentTime: 0,
+        videoWidth: 1280,
+        videoHeight: 720,
+        onloadedmetadata: null,
+        onseeked: null,
+        onerror: null,
+        load: jest.fn(function (this: any) {
+            // Simulate video loaded metadata
+            setTimeout(() => {
+                if (this.onloadedmetadata) {
+                    this.onloadedmetadata();
+                }
+
+                // Simulate seeking completed
+                setTimeout(() => {
+                    if (this.onseeked) {
+                        this.onseeked();
+                    }
+                }, 10);
+            }, 10);
+        }),
+        error: null
+    };
+
+    const mockCanvasContext = {
+        drawImage: jest.fn()
+    };
+
+    const mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: jest.fn().mockReturnValue(mockCanvasContext),
+        toBlob: jest.fn((callback) => callback(new MockBlob(['mock-data'], { type: 'image/jpeg' })))
+    };
+
+    // Mock document.createElement
+    document.createElement = jest.fn((tagName) => {
+        if (tagName === 'video') return mockVideoElement as any;
+        if (tagName === 'canvas') return mockCanvas as any;
+        return document.createElement(tagName);
+    });
+
+    // Mock URL methods
+    URL.createObjectURL = jest.fn().mockReturnValue('blob:mock-url');
+    URL.revokeObjectURL = jest.fn();
+
+    // Mock fileSystem operations for successful cases
+    (executeOperation as jest.Mock).mockImplementation((_, operation) => {
+        if (operation.type === 'READ') {
+            return Promise.resolve({ data: new ArrayBuffer(1024) });
+        }
+        if (operation.type === 'WRITE') {
+            return Promise.resolve(true);
+        }
+        if (operation.type === 'CREATE_DIRECTORY') {
+            return Promise.resolve(true);
+        }
+        return Promise.resolve(null);
+    });
+
+    return {
+        mockVideoElement,
+        mockCanvas,
+        mockCanvasContext
+    };
+}
+
 describe('BrowserThumbnailGenerator', () => {
     // Increase test timeout to avoid timeout issues
     jest.setTimeout(10000);
-    
+
+    // Set up console mocks before all tests
+    beforeAll(() => {
+        // Save original console methods
+        originalConsoleLog = console.log;
+        originalConsoleError = console.error;
+
+        // Silence console output during tests
+        console.log = jest.fn();
+        console.error = jest.fn();
+    });
+
+    // Restore console after all tests
+    afterAll(() => {
+        console.log = originalConsoleLog;
+        console.error = originalConsoleError;
+    });
+
     // Reset mocks between tests
     beforeEach(() => {
         jest.clearAllMocks();
@@ -117,72 +214,8 @@ describe('BrowserThumbnailGenerator', () => {
             originalCreateObjectURL = URL.createObjectURL;
             originalRevokeObjectURL = URL.revokeObjectURL;
 
-            // Mock canvas and video elements
-            const mockVideoElement = {
-                src: '',
-                crossOrigin: '',
-                muted: false,
-                preload: '',
-                duration: 10,
-                currentTime: 0,
-                videoWidth: 1280,
-                videoHeight: 720,
-                onloadedmetadata: null,
-                onseeked: null,
-                onerror: null,
-                load: jest.fn(function (this: any) {
-                    // Simulate video loaded metadata
-                    setTimeout(() => {
-                        if (this.onloadedmetadata) {
-                            this.onloadedmetadata();
-                        }
-
-                        // Simulate seeking completed
-                        setTimeout(() => {
-                            if (this.onseeked) {
-                                this.onseeked();
-                            }
-                        }, 10);
-                    }, 10);
-                }),
-                error: null
-            };
-
-            const mockCanvasContext = {
-                drawImage: jest.fn()
-            };
-
-            const mockCanvas = {
-                width: 0,
-                height: 0,
-                getContext: jest.fn().mockReturnValue(mockCanvasContext),
-                toBlob: jest.fn((callback) => callback(new MockBlob(['mock-data'], { type: 'image/jpeg' })))
-            };
-
-            // Mock document.createElement
-            document.createElement = jest.fn((tagName) => {
-                if (tagName === 'video') return mockVideoElement as any;
-                if (tagName === 'canvas') return mockCanvas as any;
-                return originalCreateElement(tagName);
-            });
-
-            // Mock URL methods
-            URL.createObjectURL = jest.fn().mockReturnValue('blob:mock-url');
-            URL.revokeObjectURL = jest.fn();
-
-            // Mock fileSystem operations for successful cases
-            (executeOperation as jest.Mock).mockImplementation((_, operation) => {
-                if (operation.type === 'READ') {
-                    return Promise.resolve({ data: new ArrayBuffer(1024) });
-                }
-                if (operation.type === 'WRITE') {
-                    return Promise.resolve(true);
-                }
-                if (operation.type === 'CREATE_DIRECTORY') {
-                    return Promise.resolve(true);
-                }
-                return Promise.resolve(null);
-            });
+            // Setup mocks
+            setupThumbnailMocks();
         });
 
         afterEach(() => {
@@ -198,7 +231,7 @@ describe('BrowserThumbnailGenerator', () => {
 
             const result = await generateThumbnail(videoPath, outputPath);
 
-            // The real generateThumbnail code has errors, but our mocks should make it succeed
+            // The thumbnail generation should succeed with our mocks
             expect(result.success).toBe(true);
             expect(result.blobUrl).toBe('blob:mock-url');
 
@@ -254,22 +287,8 @@ describe('BrowserThumbnailGenerator', () => {
             originalCreateElement = document.createElement;
             originalCreateObjectURL = URL.createObjectURL;
 
-            // Mock URL methods
-            URL.createObjectURL = jest.fn().mockReturnValue('blob:mock-url');
-
-            // Mock fileSystem operations by default
-            (executeOperation as jest.Mock).mockImplementation((_, operation) => {
-                if (operation.type === 'READ') {
-                    return Promise.resolve({ data: new ArrayBuffer(1024) });
-                }
-                if (operation.type === 'WRITE') {
-                    return Promise.resolve(true);
-                }
-                if (operation.type === 'CREATE_DIRECTORY') {
-                    return Promise.resolve(true);
-                }
-                return Promise.resolve(null);
-            });
+            // Setup mocks
+            setupThumbnailMocks();
 
             // Ensure browser environment
             if (global.window === undefined) {
@@ -301,12 +320,8 @@ describe('BrowserThumbnailGenerator', () => {
         it('should generate thumbnail if not found on disk', async () => {
             const videoPath = '/videos/new.mp4';
             const thumbnailPath = getThumbnailPath(videoPath);
-            
-            // Make sure URL methods are properly mocked
-            URL.createObjectURL = jest.fn().mockReturnValue('blob:mock-url');
-            URL.revokeObjectURL = jest.fn();
-            
-            // Mock failing read operation (thumbnail not found) then successful operations
+
+            // Override the default mock to simulate missing thumbnail
             (executeOperation as jest.Mock).mockImplementation((_, operation) => {
                 if (operation.type === 'READ' && operation.path === thumbnailPath) {
                     throw new Error('File not found');
@@ -319,74 +334,20 @@ describe('BrowserThumbnailGenerator', () => {
                 }
                 return Promise.resolve(null);
             });
-            
-            // Setup mock video element to simulate successful generation
-            document.createElement = jest.fn().mockImplementation((tag) => {
-                if (tag === 'video') {
-                    return {
-                        src: '',
-                        crossOrigin: '',
-                        muted: false,
-                        preload: '',
-                        duration: 10,
-                        currentTime: 0,
-                        videoWidth: 1280,
-                        videoHeight: 720,
-                        load: jest.fn(function (this: any) {
-                            // Simulate onloadedmetadata
-                            setTimeout(() => {
-                                if (this.onloadedmetadata) {
-                                    this.onloadedmetadata();
-                                }
-                                
-                                // Simulate onseeked
-                                setTimeout(() => {
-                                    if (this.onseeked) {
-                                        this.onseeked();
-                                    }
-                                }, 10);
-                            }, 10);
-                        }),
-                        get onloadedmetadata() { return this._onloadedmetadata; },
-                        set onloadedmetadata(fn: any) { this._onloadedmetadata = fn; },
-                        get onseeked() { return this._onseeked; },
-                        set onseeked(fn: any) { this._onseeked = fn; },
-                        get onerror() { return this._onerror; },
-                        set onerror(fn: any) { this._onerror = fn; }
-                    } as any;
-                }
-                
-                if (tag === 'canvas') {
-                    return {
-                        width: 0,
-                        height: 0,
-                        getContext: () => ({
-                            drawImage: jest.fn()
-                        }),
-                        toBlob: (callback: (blob: Blob | null) => void) => {
-                            const blob = new MockBlob(['mock-thumbnail-data'], { type: 'image/jpeg' });
-                            callback(blob);
-                        }
-                    } as any;
-                }
-                
-                return originalCreateElement(tag);
-            });
-            
-            // Mock inside the test to ensure we override any previous mocks
-            global.URL = {
-                createObjectURL: jest.fn().mockReturnValue('blob:mock-url'),
-                revokeObjectURL: jest.fn(),
-            } as any;
-            
-            // Call the function under test with a promise timeout
-            const result = await Promise.race([
-                ensureThumbnailExists(videoPath),
-                new Promise<string>(resolve => setTimeout(() => resolve('blob:mock-url'), 3000))
-            ]);
-            
+
+            // Call the function under test
+            const result = await ensureThumbnailExists(videoPath);
+
             // Verify the blob URL is returned (success case)
             expect(result).toBe('blob:mock-url');
+
+            // Verify that generateThumbnail was implicitly called
+            // by checking if the write operation for the new thumbnail was performed
+            const writeCalls = (executeOperation as jest.Mock).mock.calls.filter(
+                call => call[1].type === 'WRITE' && call[1].path === thumbnailPath
+            );
+
+            expect(writeCalls.length).toBe(1);
         });
 
         it('should read existing thumbnail if available', async () => {
