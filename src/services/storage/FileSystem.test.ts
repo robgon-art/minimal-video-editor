@@ -1,78 +1,313 @@
-import { mockFileSystem } from '../../infrastructure/fileSystem/FileSystem.mock';
+import { IndexedDBStorage, fileSystem } from './FileSystem';
+import { MockStorageAdapter } from '../../infrastructure/fileSystem/FileSystem.mock';
+import { MediaMetadata } from '../media/MediaMetadata';
+
+// Add structuredClone polyfill if it doesn't exist
+if (typeof structuredClone !== 'function') {
+  // @ts-ignore - Adding global polyfill
+  global.structuredClone = (obj: any) => {
+    // Special handling for ArrayBuffer
+    if (obj instanceof ArrayBuffer) {
+      const buffer = new ArrayBuffer(obj.byteLength);
+      new Uint8Array(buffer).set(new Uint8Array(obj));
+      return buffer;
+    }
+    
+    // For objects containing ArrayBuffers, need custom handling
+    if (obj && typeof obj === 'object') {
+      const clone = Array.isArray(obj) ? [] : {};
+      for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          // @ts-ignore
+          clone[key] = global.structuredClone(obj[key]);
+        }
+      }
+      return clone;
+    }
+    
+    // For simple values
+    return obj;
+  };
+}
+
 import {
-  createListOperation,
-  createReadOperation,
-  OperationType
+  Operation,
+  OperationType,
+  WriteOperation,
+  ReadOperation,
+  ListOperation,
+  DeleteOperation,
+  CreateDirectoryOperation
 } from './StorageOperations';
 
-// Test the mock storage adapter implementation
-describe('MockStorageAdapter', () => {
+// Setup fake IndexedDB environment
+import 'fake-indexeddb/auto';
+
+describe('IndexedDBStorage', () => {
+  let storage: IndexedDBStorage;
+
   beforeEach(() => {
-    // Reset the mock if needed
+    // Create a fresh instance for each test
+    storage = new IndexedDBStorage();
+
+    // Clear IndexedDB between tests
+    indexedDB.deleteDatabase('videoEditorFileSystem');
   });
 
-  describe('LIST operations', () => {
-    it('returns files from the specified directory', async () => {
-      const listOperation = createListOperation('/media');
-      const files = await mockFileSystem.executeOperation(listOperation);
+  describe('Basic CRUD operations', () => {
+    it('should write and read a file successfully', async () => {
+      // Arrange
+      const testData = new ArrayBuffer(100);
+      const path = '/test/file.mp4';
 
-      expect(files).toContain('/media/sample1.mp4');
-      expect(files).toContain('/media/sample2.mov');
-      expect(files).toContain('/media/sample3.avi');
-    });
-
-    it('returns empty array for directory with no matching files', async () => {
-      const listOperation = createListOperation('/nonexistent');
-      const files = await mockFileSystem.executeOperation(listOperation);
-
-      expect(files).toEqual([]);
-    });
-  });
-
-  describe('READ operations', () => {
-    it('returns data and metadata for existing files', async () => {
-      const readOperation = createReadOperation('/media/sample1.mp4');
-      const result = await mockFileSystem.executeOperation(readOperation);
-
-      expect(result).toHaveProperty('data');
-      expect(result).toHaveProperty('metadata');
-      expect(result.metadata).toHaveProperty('size');
-      expect(result.metadata).toHaveProperty('lastModified');
-      expect(result.metadata).toHaveProperty('durationInSeconds', 30);
-    });
-
-    it('throws error for non-existent files', async () => {
-      const readOperation = createReadOperation('/nonexistent/file.mp4');
-
-      await expect(
-        mockFileSystem.executeOperation(readOperation)
-      ).rejects.toThrow('File not found');
-    });
-  });
-
-  describe('WRITE operations', () => {
-    it('writes file data and returns true', async () => {
-      const writeOperation = {
+      // Act - Write
+      const writeOp: WriteOperation = {
         type: OperationType.WRITE,
-        path: '/test/newfile.mp4',
-        data: new ArrayBuffer(10)
+        path,
+        data: testData
       };
 
-      const result = await mockFileSystem.executeOperation(writeOperation);
-      expect(result).toBe(true);
+      const writeResult = await storage.executeOperation(writeOp);
 
-      // Verify the file exists at the new location
-      const readOperation = createReadOperation('/test/newfile.mp4');
-      const fileData = await mockFileSystem.executeOperation(readOperation);
-      expect(fileData).toHaveProperty('metadata.durationInSeconds', 30);
+      // Act - Read
+      const readOp: ReadOperation = {
+        type: OperationType.READ,
+        path
+      };
+
+      const readResult = await storage.executeOperation(readOp);
+
+      // Assert
+      expect(writeResult).toBe(true);
+      expect(readResult.data).toEqual(testData);
+      expect(readResult.metadata).toBeDefined();
+      expect(readResult.metadata.size).toBe(testData.byteLength);
+    });
+
+    it('should delete a file successfully', async () => {
+      // Arrange
+      const testData = new ArrayBuffer(100);
+      const path = '/test/file-to-delete.mp4';
+
+      // Write first
+      const writeOp: WriteOperation = {
+        type: OperationType.WRITE,
+        path,
+        data: testData
+      };
+
+      await storage.executeOperation(writeOp);
+
+      // Act - Delete
+      const deleteOp: DeleteOperation = {
+        type: OperationType.DELETE,
+        path
+      };
+
+      const deleteResult = await storage.executeOperation(deleteOp);
+
+      // Assert
+      expect(deleteResult).toBe(true);
+
+      // Verify deletion by attempting to read
+      const readOp: ReadOperation = {
+        type: OperationType.READ,
+        path
+      };
+
+      await expect(storage.executeOperation(readOp)).rejects.toThrow();
+    });
+
+    it('should list files in a directory', async () => {
+      // Arrange
+      const testData = new ArrayBuffer(100);
+      const basePath = '/test-list';
+      const filePaths = [
+        `${basePath}/file1.mp4`,
+        `${basePath}/file2.mp4`,
+        `${basePath}/subdirectory/file3.mp4`,
+        '/other-directory/file4.mp4'
+      ];
+
+      // Write all files
+      for (const path of filePaths) {
+        const writeOp: WriteOperation = {
+          type: OperationType.WRITE,
+          path,
+          data: testData
+        };
+        await storage.executeOperation(writeOp);
+      }
+
+      // Act - List
+      const listOp: ListOperation = {
+        type: OperationType.LIST,
+        path: basePath
+      };
+
+      const files = await storage.executeOperation(listOp);
+
+      // Assert
+      expect(files).toHaveLength(3); // Should not include the one in other-directory
+      expect(files).toContain(filePaths[0]);
+      expect(files).toContain(filePaths[1]);
+      expect(files).toContain(filePaths[2]);
+      expect(files).not.toContain(filePaths[3]);
+    });
+
+    it('should create directory (virtual operation)', async () => {
+      // Act
+      const createDirOp: CreateDirectoryOperation = {
+        type: OperationType.CREATE_DIRECTORY,
+        path: '/virtual-dir'
+      };
+
+      const result = await storage.executeOperation(createDirOp);
+
+      // Assert - should always succeed in IndexedDB implementation
+      expect(result).toBe(true);
     });
   });
 
-  describe('unsupported operations', () => {
-    it('throws for unsupported operations', async () => {
-      await expect(
-        mockFileSystem.executeOperation({ type: 'UNSUPPORTED' } as any)
-      ).rejects.toThrow('Unsupported operation');
+  describe('Metadata operations', () => {
+    it('should update metadata for an existing file', async () => {
+      // Arrange
+      const testData = new ArrayBuffer(100);
+      const path = '/test/metadata-file.mp4';
+      
+      // Write first
+      const writeOp: WriteOperation = {
+        type: OperationType.WRITE,
+        path,
+        data: testData
+      };
+      
+      await storage.executeOperation(writeOp);
+      
+      // Act - Update metadata
+      const newMetadata: Partial<MediaMetadata> = {
+        durationInSeconds: 120,
+        size: 1024
+      };
+      
+      const updateResult = await storage.updateMetadata(path, newMetadata);
+      
+      // Read back
+      const readOp: ReadOperation = {
+        type: OperationType.READ,
+        path
+      };
+      
+      const readResult = await storage.executeOperation(readOp);
+      
+      // Assert
+      expect(updateResult).toBe(true);
+      expect(readResult.metadata.durationInSeconds).toBe(newMetadata.durationInSeconds);
+      expect(readResult.metadata.size).toBe(newMetadata.size);
+    });
+    
+    it('should fail to update metadata for non-existent file', async () => {
+      // Temporarily silence console.error for this test
+      const originalConsoleError = console.error;
+      console.error = jest.fn();
+      
+      try {
+        // Act
+        const nonExistentPath = '/test/non-existent-file.mp4';
+        const updateResult = await storage.updateMetadata(nonExistentPath, {
+          durationInSeconds: 60
+        });
+        
+        // Assert
+        expect(updateResult).toBe(false);
+      } finally {
+        // Restore console.error
+        console.error = originalConsoleError;
+      }
+    });
+  });
+
+  describe('Error handling', () => {
+    it('should handle read error for non-existent file', async () => {
+      // Arrange
+      const readOp: ReadOperation = {
+        type: OperationType.READ,
+        path: '/non-existent.mp4'
+      };
+
+      // Act & Assert
+      await expect(storage.executeOperation(readOp)).rejects.toThrow();
+    });
+
+    it('should return empty array when listing non-existent directory', async () => {
+      // Arrange
+      const listOp: ListOperation = {
+        type: OperationType.LIST,
+        path: '/non-existent-dir'
+      };
+
+      // Act
+      const result = await storage.executeOperation(listOp);
+
+      // Assert
+      expect(result).toEqual([]);
+    });
+
+    it('should throw error for unsupported operation type', async () => {
+      // Arrange
+      const invalidOp = {
+        type: 'INVALID_TYPE'
+      } as unknown as Operation;
+
+      // Act & Assert
+      await expect(storage.executeOperation(invalidOp)).rejects.toThrow();
+    });
+  });
+
+  describe('Integration with MockStorageAdapter', () => {
+    let mockStorage: MockStorageAdapter;
+
+    beforeEach(() => {
+      mockStorage = new MockStorageAdapter();
+    });
+
+    it('should have compatible interfaces allowing interchangeable use', async () => {
+      // This test verifies that both implementations work the same way
+      const testData = new ArrayBuffer(100);
+      const path = '/test/compatibility-test.mp4';
+
+      // Create identical write operations
+      const writeOp: WriteOperation = {
+        type: OperationType.WRITE,
+        path,
+        data: testData
+      };
+
+      // Execute on both implementations
+      const indexedDBResult = await storage.executeOperation(writeOp);
+      const mockResult = await mockStorage.executeOperation(writeOp);
+
+      // Both should succeed
+      expect(indexedDBResult).toBe(true);
+      expect(mockResult).toBe(true);
+
+      // Create read operations
+      const readOp: ReadOperation = {
+        type: OperationType.READ,
+        path
+      };
+
+      // Read from both implementations
+      const indexedDBReadResult = await storage.executeOperation(readOp);
+      const mockReadResult = await mockStorage.executeOperation(readOp);
+
+      // Both should return data with metadata
+      expect(indexedDBReadResult.data).toEqual(testData);
+      expect(mockReadResult.data).toEqual(testData);
+
+      // Both should have metadata structure (actual values may differ)
+      expect(indexedDBReadResult.metadata).toBeDefined();
+      expect(mockReadResult.metadata).toBeDefined();
     });
   });
 }); 
