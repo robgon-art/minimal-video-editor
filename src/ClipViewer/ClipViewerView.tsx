@@ -2,6 +2,7 @@ import React from 'react';
 import { ClipViewerViewProps } from './ClipViewerViewModel';
 import ClipListView from '../ClipList/ClipListView';
 import { useClipListViewModel } from '../ClipList/ClipListViewModel';
+import './ClipViewer.css';
 
 // Pure presentational component
 const ClipViewerView: React.FC<ClipViewerViewProps> = ({
