@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Clip } from '../models/ClipModel';
+import { Clip } from '../Clip/ClipModel';
 import { useVideoPanelViewModel } from './VideoPanel/VideoPanelViewModel';
 import { useTimeRulerViewModel } from './TimeRuler/TimeRulerViewModel';
 import { useTransportControlViewModel } from './TransportControl/TransportControlViewModel';
@@ -14,7 +14,7 @@ export interface MonitorViewProps {
     videoPanelProps: ReturnType<typeof useVideoPanelViewModel>;
     timeRulerProps: ReturnType<typeof useTimeRulerViewModel>;
     transportControlProps: ReturnType<typeof useTransportControlViewModel>;
-    onTimeUpdate: (time: number) => void;
+    onDropClip?: (clip: Clip) => void;
 }
 
 // Pure transformation function
@@ -27,7 +27,7 @@ export const createMonitorViewProps = (
     videoPanelProps: ReturnType<typeof useVideoPanelViewModel>,
     timeRulerProps: ReturnType<typeof useTimeRulerViewModel>,
     transportControlProps: ReturnType<typeof useTransportControlViewModel>,
-    onTimeUpdate: (time: number) => void
+    onDropClip?: (clip: Clip) => void
 ): MonitorViewProps => ({
     title,
     currentClip,
@@ -37,7 +37,7 @@ export const createMonitorViewProps = (
     videoPanelProps,
     timeRulerProps,
     transportControlProps,
-    onTimeUpdate
+    onDropClip
 });
 
 // ViewModel hook
@@ -51,7 +51,8 @@ export const useMonitorViewModel = (
     onPlay: () => void,
     onPause: () => void,
     onStepForward: () => void,
-    onStepBackward: () => void
+    onStepBackward: () => void,
+    onDropClip?: (clip: Clip) => void
 ) => {
     // ViewModels for child components
     const videoPanelProps = useVideoPanelViewModel(currentClip, currentTime);
@@ -74,7 +75,7 @@ export const useMonitorViewModel = (
             videoPanelProps,
             timeRulerProps,
             transportControlProps,
-            onTimeUpdate
+            onDropClip
         ),
         [
             title,
@@ -85,7 +86,7 @@ export const useMonitorViewModel = (
             videoPanelProps,
             timeRulerProps,
             transportControlProps,
-            onTimeUpdate
+            onDropClip
         ]
     );
 }; 

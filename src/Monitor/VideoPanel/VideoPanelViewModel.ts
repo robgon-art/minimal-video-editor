@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Clip } from '../../models/ClipModel';
+import { Clip } from '../../Clip/ClipModel';
 
 // Props for the VideoPanel view
 export interface VideoPanelViewProps {

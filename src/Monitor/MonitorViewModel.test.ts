@@ -1,5 +1,5 @@
 import { createMonitorViewProps } from './MonitorViewModel';
-import { Clip } from '../models/ClipModel';
+import { Clip } from '../Clip/ClipModel';
 
 // Mock the child component ViewModels
 jest.mock('./VideoPanel/VideoPanelViewModel', () => ({
@@ -23,6 +23,7 @@ describe('MonitorViewModel', () => {
     };
 
     const mockOnTimeUpdate = jest.fn();
+    const mockOnDropClip = jest.fn();
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -39,7 +40,7 @@ describe('MonitorViewModel', () => {
                 { mockVideoPanelProps: true } as any,
                 { mockTimeRulerProps: true } as any,
                 { mockTransportControlProps: true } as any,
-                mockOnTimeUpdate
+                mockOnDropClip
             );
 
             expect(props).toEqual({
@@ -51,7 +52,7 @@ describe('MonitorViewModel', () => {
                 videoPanelProps: { mockVideoPanelProps: true },
                 timeRulerProps: { mockTimeRulerProps: true },
                 transportControlProps: { mockTransportControlProps: true },
-                onTimeUpdate: mockOnTimeUpdate
+                onDropClip: mockOnDropClip
             });
         });
     });

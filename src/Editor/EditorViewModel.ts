@@ -39,6 +39,19 @@ export const useEditorViewModel = () => {
         setSelectedClip(selected || null);
     }, [clips]);
 
+    // Handler for when a clip is dropped in the source monitor
+    const handleDropInSourceMonitor = useCallback((droppedClip: Clip) => {
+        // Find the clip in our list to ensure we have the latest version
+        const clipInList = clips.find(clip => clip.id === droppedClip.id);
+        
+        if (clipInList) {
+            // Set this clip as selected in the clip viewer
+            clipViewerViewModel.onClipClick(clipInList.id);
+        } else {
+            console.warn("Dropped clip not found in clip list:", droppedClip);
+        }
+    }, [clips, clipViewerViewModel]);
+
     // Monitor state
     const [sourceIsPlaying, setSourceIsPlaying] = useState(false);
     const [sourceCurrentTime, setSourceCurrentTime] = useState(0);
@@ -104,7 +117,8 @@ export const useEditorViewModel = () => {
         handleSourcePlay,
         handleSourcePause,
         handleSourceStepForward,
-        handleSourceStepBackward
+        handleSourceStepBackward,
+        handleDropInSourceMonitor
     );
 
     const programMonitorProps = useMonitorViewModel(
