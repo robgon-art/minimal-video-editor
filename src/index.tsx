@@ -3,6 +3,12 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { fileSystem } from './services/storage/FileSystem';
+
+// Set up event listener to close DB connection when page unloads
+window.addEventListener('beforeunload', () => {
+  fileSystem.closeDB();
+});
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
