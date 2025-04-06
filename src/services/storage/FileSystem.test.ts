@@ -12,7 +12,7 @@ if (typeof structuredClone !== 'function') {
       new Uint8Array(buffer).set(new Uint8Array(obj));
       return buffer;
     }
-    
+
     // For objects containing ArrayBuffers, need custom handling
     if (obj && typeof obj === 'object') {
       const clone = Array.isArray(obj) ? [] : {};
@@ -24,7 +24,7 @@ if (typeof structuredClone !== 'function') {
       }
       return clone;
     }
-    
+
     // For simple values
     return obj;
   };
@@ -174,50 +174,50 @@ describe('IndexedDBStorage', () => {
       // Arrange
       const testData = new ArrayBuffer(100);
       const path = '/test/metadata-file.mp4';
-      
+
       // Write first
       const writeOp: WriteOperation = {
         type: OperationType.WRITE,
         path,
         data: testData
       };
-      
+
       await storage.executeOperation(writeOp);
-      
+
       // Act - Update metadata
       const newMetadata: Partial<MediaMetadata> = {
         durationInSeconds: 120,
         size: 1024
       };
-      
+
       const updateResult = await storage.updateMetadata(path, newMetadata);
-      
+
       // Read back
       const readOp: ReadOperation = {
         type: OperationType.READ,
         path
       };
-      
+
       const readResult = await storage.executeOperation(readOp);
-      
+
       // Assert
       expect(updateResult).toBe(true);
       expect(readResult.metadata.durationInSeconds).toBe(newMetadata.durationInSeconds);
       expect(readResult.metadata.size).toBe(newMetadata.size);
     });
-    
+
     it('should fail to update metadata for non-existent file', async () => {
       // Temporarily silence console.error for this test
       const originalConsoleError = console.error;
       console.error = jest.fn();
-      
+
       try {
         // Act
         const nonExistentPath = '/test/non-existent-file.mp4';
         const updateResult = await storage.updateMetadata(nonExistentPath, {
           durationInSeconds: 60
         });
-        
+
         // Assert
         expect(updateResult).toBe(false);
       } finally {
@@ -310,4 +310,4 @@ describe('IndexedDBStorage', () => {
       expect(mockReadResult.metadata).toBeDefined();
     });
   });
-}); 
+});
