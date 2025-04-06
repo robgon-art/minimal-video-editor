@@ -1,3 +1,50 @@
+Sunday, April 6, 2025 12:57:33 PM
+-------------------------------|---------|----------|---------|---------|----------------------------
+File                           | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+-------------------------------|---------|----------|---------|---------|----------------------------
+All files                      |   92.09 |       80 |   93.33 |   92.94 |                            
+ src                           |    90.9 |      100 |      75 |    90.9 |                            
+  App.tsx                      |     100 |      100 |     100 |     100 |                            
+  index.tsx                    |      80 |      100 |       0 |      80 | 10                         
+ src/Clip                      |     100 |      100 |     100 |     100 |                            
+  ClipModel.ts                 |     100 |      100 |     100 |     100 |                            
+  ClipUtils.ts                 |     100 |      100 |     100 |     100 |                            
+  ClipView.tsx                 |     100 |      100 |     100 |     100 |                            
+  ClipViewModel.ts             |     100 |      100 |     100 |     100 |                            
+ src/ClipList                  |     100 |    83.33 |     100 |     100 |                            
+  ClipListView.tsx             |     100 |      100 |     100 |     100 |                            
+  ClipListViewModel.ts         |     100 |       75 |     100 |     100 | 60                         
+ src/ClipViewer                |     100 |       75 |     100 |     100 |                            
+  ClipViewerView.tsx           |     100 |       50 |     100 |     100 | 31-37                      
+  ClipViewerViewModel.ts       |     100 |      100 |     100 |     100 |                            
+ src/Editor                    |     100 |      100 |     100 |     100 |                            
+  EditorView.tsx               |     100 |      100 |     100 |     100 |                            
+  EditorViewModel.ts           |     100 |      100 |     100 |     100 |                            
+ src/infrastructure/io         |      92 |      100 |     100 |      92 |                            
+  IOEffects.ts                 |      92 |      100 |     100 |      92 | 46-47                      
+ src/models                    |     100 |      100 |     100 |     100 |                            
+  ClipModel.ts                 |     100 |      100 |     100 |     100 |                            
+ src/services/media            |   95.08 |       80 |     100 |   95.08 |                            
+  MediaMetadata.ts             |     100 |    83.33 |     100 |     100 | 19                         
+  MediaScanner.ts              |   91.66 |      100 |     100 |   91.66 | 97-98,109                  
+  MediaTransforms.ts           |     100 |       50 |     100 |     100 | 18                         
+ src/services/storage          |   87.07 |       80 |   79.54 |    91.4 |                            
+  FileOperations.ts            |    90.9 |       75 |   77.77 |     100 | 45                         
+  FileSystem.ts                |   85.21 |    80.76 |   76.66 |   89.62 | ...163-164,197-198,237,248 
+  StorageOperations.ts         |     100 |      100 |     100 |     100 |                            
+ src/utils/functional          |     100 |    83.33 |     100 |     100 |                            
+  functional.ts                |     100 |    83.33 |     100 |     100 | 14-16                      
+ src/utils/media               |   82.92 |    61.11 |   91.66 |   82.92 |                            
+  BrowserThumbnailGenerator.ts |   82.92 |    61.11 |   91.66 |   82.92 | ...200-201,206-207,237-244 
+ src/utils/path                |     100 |      100 |     100 |     100 |                            
+  PathUtils.ts                 |     100 |      100 |     100 |     100 |                            
+-------------------------------|---------|----------|---------|---------|----------------------------
+Test Suites: 19 passed, 19 total
+Tests:       157 passed, 157 total
+Snapshots:   0 total
+Time:        10.323 s
+Ran all test suites.
+
 Sunday, April 6, 2025 11:56:47 AM
 -------------------------------|---------|----------|---------|---------|------------------------------------
 File                           | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s

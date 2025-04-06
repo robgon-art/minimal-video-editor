@@ -37,23 +37,12 @@ export const mapPathsToClips = (
 };
 
 /**
- * Check if running in a test environment
- */
-const isTestEnvironment = (): boolean => {
-    return process.env.NODE_ENV === 'test' || typeof window === 'undefined' || typeof indexedDB === 'undefined';
-};
-
-/**
  * Creates a thumbnail URL for a media file
  * @param filePath The path to the media file 
  * @returns A promise that resolves to the thumbnail URL
  */
 export const createThumbnailUrl = async (filePath: string): Promise<string> => {
-    // In test environment, use a placeholder directly
-    if (isTestEnvironment()) {
-        return '/video_clip.png';
-    }
-
+ 
     try {
         // Generate or retrieve thumbnail path
         const thumbnailPath = await ensureThumbnailExists(filePath);
