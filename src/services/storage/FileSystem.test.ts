@@ -264,6 +264,57 @@ describe('IndexedDBStorage', () => {
     });
   });
 
+  describe('Database connection management', () => {
+    it('should close database connection successfully', async () => {
+      // Arrange - Perform an operation to ensure DB is open
+      const testData = new ArrayBuffer(100);
+      const path = '/test/connection-test.mp4';
+      const writeOp: WriteOperation = {
+        type: OperationType.WRITE,
+        path,
+        data: testData
+      };
+      await storage.executeOperation(writeOp);
+      
+      // Act
+      const result = await storage.closeDB();
+      
+      // Assert
+      expect(result).toBe(true);
+      
+      // Attempt to close again - should return false as connection is already closed
+      const secondCloseResult = await storage.closeDB();
+      expect(secondCloseResult).toBe(false);
+    });
+    
+    it('should reconnect after database is closed', async () => {
+      // Arrange
+      const testData = new ArrayBuffer(100);
+      const path = '/test/reconnect-test.mp4';
+      
+      // Write data
+      const writeOp: WriteOperation = {
+        type: OperationType.WRITE,
+        path,
+        data: testData
+      };
+      await storage.executeOperation(writeOp);
+      
+      // Close connection
+      await storage.closeDB();
+      
+      // Act - Should reopen connection automatically
+      const readOp: ReadOperation = {
+        type: OperationType.READ,
+        path
+      };
+      const readResult = await storage.executeOperation(readOp);
+      
+      // Assert
+      expect(readResult.data).toEqual(testData);
+    });
+  });
+
   describe('Integration with MockStorageAdapter', () => {
     let mockStorage: MockStorageAdapter;
 

@@ -18,11 +18,17 @@ export class IndexedDBStorage implements StorageAdapter {
   private DB_NAME = 'videoEditorFileSystem';
   private DB_VERSION = 1;
   private STORE_NAME = 'files';
+  private dbConnection: IDBDatabase | null = null;
 
   /**
    * Opens the IndexedDB database
    */
   private async openDB(): Promise<IDBDatabase> {
+    // If connection exists, return it
+    if (this.dbConnection) {
+      return this.dbConnection;
+    }
+
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
 
@@ -31,6 +37,7 @@ export class IndexedDBStorage implements StorageAdapter {
       };
 
       request.onsuccess = () => {
+        this.dbConnection = request.result;
         resolve(request.result);
       };
 
@@ -41,6 +48,18 @@ export class IndexedDBStorage implements StorageAdapter {
         }
       };
     });
+  }
+
+  /**
+   * Closes the database connection if it's open
+   */
+  async closeDB(): Promise<boolean> {
+    if (this.dbConnection) {
+      this.dbConnection.close();
+      this.dbConnection = null;
+      return true;
+    }
+    return false;
   }
 
   /**
