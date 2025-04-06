@@ -7,8 +7,19 @@ import {
   isSupportedMediaType
 } from './FileOperations';
 import { createClipFromFile } from '../../Clip/ClipModel';
+import { fileSystem } from './FileSystem';
 
 describe('FileOperations', () => {
+  // Close any database connections after all tests are done
+  afterAll(async () => {
+    await fileSystem.closeDB();
+    
+    // Force close any open IndexedDB connections
+    if (typeof indexedDB !== 'undefined') {
+      indexedDB.deleteDatabase('videoEditorFileSystem');
+    }
+  });
+
   describe('createCopyFileOperation', () => {
     it('should create a copy file operation object', () => {
       const sourcePath = '/path/to/source.mp4';

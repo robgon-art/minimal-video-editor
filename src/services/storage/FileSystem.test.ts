@@ -54,6 +54,17 @@ describe('IndexedDBStorage', () => {
     indexedDB.deleteDatabase('videoEditorFileSystem');
   });
 
+  afterEach(async () => {
+    // Close database connection after each test
+    await storage.closeDB();
+  });
+
+  afterAll(async () => {
+    // Close any remaining database connections and delete the test database
+    await storage.closeDB();
+    indexedDB.deleteDatabase('videoEditorFileSystem');
+  });
+
   describe('Basic CRUD operations', () => {
     it('should write and read a file successfully', async () => {
       // Arrange

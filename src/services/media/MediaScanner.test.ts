@@ -18,6 +18,19 @@ describe('MediaScanner', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
+  
+  // Clean up after all tests
+  afterAll(() => {
+    // Clean up any open database connections
+    // Since we're mocking fileSystem, we need to ensure the real implementation is invoked
+    const realFileSystem = jest.requireActual('../storage/FileSystem').fileSystem;
+    realFileSystem.closeDB();
+    
+    // Force close any IndexedDB connections
+    if (typeof indexedDB !== 'undefined') {
+      indexedDB.deleteDatabase('videoEditorFileSystem');
+    }
+  });
 
   describe('scanMediaFolder', () => {
     it('should return clips for media files in the media folder', async () => {

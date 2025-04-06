@@ -148,6 +148,16 @@ describe('BrowserThumbnailGenerator', () => {
     afterAll(() => {
         console.log = originalConsoleLog;
         console.error = originalConsoleError;
+        
+        // Clean up any open database connections
+        // Since we're mocking fileSystem, we need to ensure the real implementation is invoked
+        const realFileSystem = jest.requireActual('../../services/storage/FileSystem').fileSystem;
+        realFileSystem.closeDB();
+        
+        // Force close any IndexedDB connections
+        if (typeof indexedDB !== 'undefined') {
+            indexedDB.deleteDatabase('videoEditorFileSystem');
+        }
     });
 
     // Reset mocks between tests
