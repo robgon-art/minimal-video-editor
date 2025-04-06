@@ -15,5 +15,14 @@ module.exports = {
 
             return webpackConfig;
         }
+    },
+    jest: {
+        configure: {
+            coveragePathIgnorePatterns: [
+                "/node_modules/",
+                "/src/infrastructure/fileSystem/FileSystem.mock.ts",
+                "/src/reportWebVitals.ts"
+            ]
+        }
     }
 }; 
