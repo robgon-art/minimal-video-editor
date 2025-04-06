@@ -23,7 +23,7 @@
 }
 
 .add-clips-button {
-    background-color: #9e9e9e;
+    background-color: #7e72c3;
     color: white;
     border: none;
     padding: 0.5rem 1rem;
@@ -33,7 +33,7 @@
 }
 
 .add-clips-button:hover {
-    background-color: #b5b5b5;
+    background-color: #8695e4;
 }
 
 .add-clips-button:disabled {

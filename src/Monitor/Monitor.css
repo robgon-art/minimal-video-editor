@@ -162,23 +162,31 @@
     border: none;
     color: white;
     font-size: 20px;
-    margin: 0 10px;
+    margin: 0 5px;
     cursor: pointer;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 50%;
-    transition: background-color 0.2s;
+    border-radius: 0;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .transport-control button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.4);
+}
+
+.transport-control button:hover img {
+    filter: brightness(2) drop-shadow(0 0 3px rgba(255, 255, 255, 0.7));
+    /* transform: scale(1.1); */
+    transition: all 0.2s ease;
 }
 
 .transport-control button:active {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
 .play-pause-button {

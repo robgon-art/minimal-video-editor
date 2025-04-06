@@ -17,9 +17,7 @@ const TransportControlView: React.FC<TransportControlViewProps> = ({
                 aria-label="Step backward"
                 title="Step backward"
             >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M1 4v8h2V4H1zm2 4l8 4V0L3 4z" />
-                </svg>
+                <img src="/step_back.png" alt="Step backward" width="32" height="32" />
             </button>
 
             <button
@@ -30,13 +28,9 @@ const TransportControlView: React.FC<TransportControlViewProps> = ({
                 title={isPlaying ? "Pause" : "Play"}
             >
                 {isPlaying ? (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M2.5 2h3v12h-3V2zm8 0h3v12h-3V2z" />
-                    </svg>
+                    <img src="/pause.png" alt="Pause" width="32" height="32" />
                 ) : (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M4 2l8 6-8 6V2z" />
-                    </svg>
+                    <img src="/play.png" alt="Play" width="32" height="32" />
                 )}
             </button>
 
@@ -47,9 +41,7 @@ const TransportControlView: React.FC<TransportControlViewProps> = ({
                 aria-label="Step forward"
                 title="Step forward"
             >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M13 4v8h2V4h-2zm-2 4L3 0v16l8-4z" />
-                </svg>
+                <img src="/step_forward.png" alt="Step forward" width="32" height="32" />
             </button>
         </div>
     );
