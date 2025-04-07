@@ -4,6 +4,10 @@
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
+// Test log configuration - set to true to enable all logs, false to filter them
+// Can be overridden by setting TEST_LOGGING=true/false in environment
+const TEST_LOGGING_ENABLED = process.env.TEST_LOGGING === 'true';
+
 // Basic test configuration
 import { configure } from '@testing-library/react';
 
@@ -149,8 +153,8 @@ const errorPatternsToFilter = [
 // Prevent specific errors from cluttering test output
 const originalConsoleError = console.error;
 console.error = (...args) => {
-  // Special handling for test environment
-  if (process.env.NODE_ENV === 'test') {
+  // Skip filtering if test logging is explicitly enabled
+  if (!TEST_LOGGING_ENABLED && process.env.NODE_ENV === 'test') {
     // Convert args to string for checking
     const errorMessage = JSON.stringify(args);
 
@@ -181,8 +185,8 @@ console.error = (...args) => {
 // Also filter console.log messages related to thumbnail generation
 const originalConsoleLog = console.log;
 console.log = (...args) => {
-  // Only filter in test environment
-  if (process.env.NODE_ENV === 'test') {
+  // Only filter in test environment and if filtering is enabled
+  if (!TEST_LOGGING_ENABLED && process.env.NODE_ENV === 'test') {
     // Convert args to string for checking
     const logMessage = JSON.stringify(args).toLowerCase();
 
@@ -193,13 +197,19 @@ console.log = (...args) => {
       logMessage.includes('ensuring') ||
       logMessage.includes('directory') ||
       logMessage.includes('generating') ||
+      logMessage.includes('clicked') ||
+      // Filter all emoji-prefixed logs in tests
+      /["'][🔍🔄🎞️✅❌⚠️🧹🎬🔔🎞️]["']/.test(logMessage) ||
       // Add our debug emoji markers
       logMessage.includes('🔍') || // Reading from storage
+      logMessage.includes('🔄') || // Loading/processing
       logMessage.includes('✅') || // Success
       logMessage.includes('❌') || // Error
       logMessage.includes('⚠️') || // Warning
       logMessage.includes('🧹') || // Cleanup
-      logMessage.includes('🎬')    // Video creation
+      logMessage.includes('🎬') || // Video creation
+      logMessage.includes('🔔') || // Events
+      logMessage.includes('🎞️')   // Media operations
     ) {
       // Skip these logs in tests
       return;
