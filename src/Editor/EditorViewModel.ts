@@ -1,7 +1,8 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useClipViewerViewModel } from '../ClipViewer/ClipViewerViewModel';
 import { useMonitorViewModel } from '../Monitor/MonitorViewModel';
 import { Clip } from '../models/ClipModel';
+import { VideoPanelRef } from '../Monitor/VideoPanel/VideoPanelView';
 
 // Props for the Editor view
 export interface EditorViewProps {
@@ -28,19 +29,23 @@ export const createEditorViewProps = (
 export const useEditorViewModel = () => {
     // Get clip viewer view model
     const clipViewerViewModel = useClipViewerViewModel();
-    const { clips } = clipViewerViewModel;
+    // Don't destructure clips - access it directly to avoid stale closures
 
     // Find the selected clip
     const [selectedClip, setSelectedClip] = useState<Clip | null>(null);
     // Separate state for the clip that's actually loaded in the monitor
     const [loadedClip, setLoadedClip] = useState<Clip | null>(null);
 
+    // Create refs for video panels
+    const sourceVideoRef = useRef<VideoPanelRef>(null);
+    const programVideoRef = useRef<VideoPanelRef>(null);
+
     // Update selected clip when clips change, but don't load it into monitor
     useEffect(() => {
-        const selected = clips.find(clip => clip.selected);
+        const selected = clipViewerViewModel.clips.find(clip => clip.selected);
         setSelectedClip(selected || null);
         // Don't update loadedClip here - keep it separate from selection
-    }, [clips]);
+    }, [clipViewerViewModel.clips]);
 
     // Handle single click (just select the clip but don't load it)
     const handleClipClick = useCallback((clipId: string) => {
@@ -57,16 +62,13 @@ export const useEditorViewModel = () => {
 
         // Load it into the monitor
         setLoadedClip(clip);
-        // Reset playback position
-        setSourceCurrentTime(0);
-        // Ensure playback is stopped
-        setSourceIsPlaying(false);
+        // Reset playback position is now handled by the monitor view model
     }, [clipViewerViewModel]);
 
     // Handler for when a clip is dropped in the source monitor
     const handleDropInSourceMonitor = useCallback((droppedClip: Clip) => {
         // Find the clip in our list to ensure we have the latest version
-        const clipInList = clips.find(clip => clip.id === droppedClip.id);
+        const clipInList = clipViewerViewModel.clips.find(clip => clip.id === droppedClip.id);
 
         if (clipInList) {
             // Set this clip as selected in the clip viewer
@@ -84,95 +86,44 @@ export const useEditorViewModel = () => {
             console.log('Loading clip into monitor with thumbnail:', clipToLoad.thumbnailUrl);
 
             setLoadedClip(clipToLoad);
-            // Reset playback position
-            setSourceCurrentTime(0);
-            // Ensure playback is stopped
-            setSourceIsPlaying(false);
+            // Reset playback position is now handled by the monitor view model
         } else {
             console.warn("Dropped clip not found in clip list:", droppedClip);
         }
-    }, [clips, clipViewerViewModel]);
+    }, [clipViewerViewModel]); // Only depend on clipViewerViewModel, not clips
 
-    // Monitor state
-    const [sourceIsPlaying, setSourceIsPlaying] = useState(false);
-    const [sourceCurrentTime, setSourceCurrentTime] = useState(0);
-    const [programIsPlaying, setProgramIsPlaying] = useState(false);
-    const [programCurrentTime, setProgramCurrentTime] = useState(0);
-
-    // Source monitor handlers
+    // Time update handlers
     const handleSourceTimeUpdate = useCallback((time: number) => {
-        setSourceCurrentTime(time);
+        // Still useful to track time in the editor for potential timeline integration
+        console.log('Source time updated:', time);
     }, []);
 
-    const handleSourcePlay = useCallback(() => {
-        setSourceIsPlaying(true);
-    }, []);
-
-    const handleSourcePause = useCallback(() => {
-        setSourceIsPlaying(false);
-    }, []);
-
-    const handleSourceStepForward = useCallback(() => {
-        setSourceCurrentTime(prev => Math.min(prev + 1 / 24, selectedClip?.duration || 0));
-    }, [selectedClip]);
-
-    const handleSourceStepBackward = useCallback(() => {
-        setSourceCurrentTime(prev => Math.max(prev - 1 / 24, 0));
-    }, []);
-
-    // Program monitor handlers
     const handleProgramTimeUpdate = useCallback((time: number) => {
-        setProgramCurrentTime(time);
+        // Still useful to track time in the editor for potential timeline integration  
+        console.log('Program time updated:', time);
     }, []);
 
-    const handleProgramPlay = useCallback(() => {
-        setProgramIsPlaying(true);
-    }, []);
-
-    const handleProgramPause = useCallback(() => {
-        setProgramIsPlaying(false);
-    }, []);
-
-    const handleProgramStepForward = useCallback(() => {
-        setProgramCurrentTime(prev => prev + 1 / 24);
-    }, []);
-
-    const handleProgramStepBackward = useCallback(() => {
-        setProgramCurrentTime(prev => Math.max(prev - 1 / 24, 0));
-    }, []);
-
-    // Reset source time when selected clip changes
-    useEffect(() => {
-        setSourceCurrentTime(0);
-        // Don't automatically stop playback here, let the clip selection effect handle it
-    }, [selectedClip]);
-
-    // Create monitor view models
+    // Create monitor view models with our new signature
     const sourceMonitorProps = useMonitorViewModel(
         "Source",
-        loadedClip, // Use loadedClip instead of selectedClip
-        sourceIsPlaying,
-        sourceCurrentTime,
-        loadedClip?.duration || 0, // Use loadedClip for duration
-        handleSourceTimeUpdate,
-        handleSourcePlay,
-        handleSourcePause,
-        handleSourceStepForward,
-        handleSourceStepBackward,
-        handleDropInSourceMonitor
+        loadedClip,            // The clip to display
+        false,                 // initialIsPlaying
+        0,                     // initialCurrentTime
+        loadedClip?.duration || 0, // duration
+        handleSourceTimeUpdate, // onTimeUpdate
+        handleDropInSourceMonitor, // onDropClip
+        sourceVideoRef         // videoPanelRef
     );
 
     const programMonitorProps = useMonitorViewModel(
         "Program",
-        null, // Program will eventually show the sequence
-        programIsPlaying,
-        programCurrentTime,
-        100, // Placeholder duration for now
-        handleProgramTimeUpdate,
-        handleProgramPlay,
-        handleProgramPause,
-        handleProgramStepForward,
-        handleProgramStepBackward
+        null,                  // Program will eventually show the sequence
+        false,                 // initialIsPlaying
+        0,                     // initialCurrentTime 
+        100,                   // Placeholder duration for now
+        handleProgramTimeUpdate, // onTimeUpdate
+        undefined,             // No drop handler for program
+        programVideoRef        // videoPanelRef
     );
 
     // Create clipViewerProps with our custom handlers

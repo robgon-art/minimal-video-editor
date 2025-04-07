@@ -5,6 +5,7 @@ export interface Clip {
     title: string;
     thumbnailUrl: string;
     duration: number; // in seconds
+    fps?: number; // frames per second, defaults to 24 if not specified
     selected?: boolean;
     filePath?: string; // Path to the actual media file
     loadedThumbnailUrl?: string; // Loaded thumbnail blob URL
@@ -15,12 +16,14 @@ export interface Clip {
  * @param filePath The path to the media file
  * @param fileName The name of the file
  * @param durationInSeconds The duration of the media in seconds
+ * @param fps The frames per second (optional, defaults to 24)
  * @returns A new Clip object
  */
 export const createClipFromFile = (
     filePath: string,
     fileName: string,
-    durationInSeconds: number
+    durationInSeconds: number,
+    fps: number = 24
 ): Clip => {
     // Use a local placeholder image instead of an external service
     return {
@@ -28,6 +31,7 @@ export const createClipFromFile = (
         title: fileName.replace(/\.[^/.]+$/, ""), // Remove file extension
         thumbnailUrl: '/video_clip.png',
         duration: durationInSeconds,
+        fps: fps,
         filePath: filePath
     };
 };

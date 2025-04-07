@@ -23,7 +23,7 @@ export interface VideoPanelViewProps {
 }
 
 // Pure transformation function to format timecode (HH:MM:SS:FF)
-export const formatTimecode = (seconds: number): string => {
+export const formatTimecode = (seconds: number, fps: number = 24): string => {
     // Handle negative values by treating them as 0
     if (seconds < 0) {
         seconds = 0;
@@ -32,7 +32,7 @@ export const formatTimecode = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
-    const frames = Math.floor((seconds % 1) * 24); // Assuming 24fps
+    const frames = Math.floor((seconds % 1) * fps); // Use provided fps instead of hardcoded 24
 
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`;
 };
@@ -44,7 +44,7 @@ export const createVideoPanelViewProps = (
 ): VideoPanelViewProps => ({
     clip,
     currentTime,
-    timecode: formatTimecode(currentTime)
+    timecode: formatTimecode(currentTime, clip?.fps)
 });
 
 // ViewModel hook

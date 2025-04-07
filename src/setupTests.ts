@@ -11,6 +11,95 @@ configure({
   testIdAttribute: 'data-testid',
 });
 
+// Mock HTMLMediaElement for video testing
+if (typeof window !== 'undefined') {
+  // Store the original properties
+  const originalDescriptors = Object.getOwnPropertyDescriptors(HTMLMediaElement.prototype);
+
+  // Create a mock state object to store the mock values
+  const mockMediaState = new WeakMap<HTMLMediaElement, {
+    paused: boolean;
+    currentTime: number;
+    duration: number;
+    volume: number;
+    muted: boolean;
+  }>();
+
+  // Get or initialize state
+  const getState = (element: HTMLMediaElement) => {
+    if (!mockMediaState.has(element)) {
+      mockMediaState.set(element, {
+        paused: true,
+        currentTime: 0,
+        duration: 100,
+        volume: 1,
+        muted: false
+      });
+    }
+    return mockMediaState.get(element)!;
+  };
+
+  // Override the properties with our mock implementations
+  Object.defineProperties(HTMLMediaElement.prototype, {
+    paused: {
+      configurable: true,
+      get(this: HTMLMediaElement) {
+        return getState(this).paused;
+      }
+    },
+    currentTime: {
+      configurable: true,
+      get(this: HTMLMediaElement) {
+        return getState(this).currentTime;
+      },
+      set(this: HTMLMediaElement, value: number) {
+        getState(this).currentTime = value;
+      }
+    },
+    duration: {
+      configurable: true,
+      get(this: HTMLMediaElement) {
+        return getState(this).duration;
+      },
+      set(this: HTMLMediaElement, value: number) {
+        getState(this).duration = value;
+      }
+    },
+    volume: {
+      configurable: true,
+      get(this: HTMLMediaElement) {
+        return getState(this).volume;
+      },
+      set(this: HTMLMediaElement, value: number) {
+        getState(this).volume = value;
+      }
+    },
+    muted: {
+      configurable: true,
+      get(this: HTMLMediaElement) {
+        return getState(this).muted;
+      },
+      set(this: HTMLMediaElement, value: boolean) {
+        getState(this).muted = value;
+      }
+    }
+  });
+
+  // Mock methods
+  HTMLMediaElement.prototype.play = jest.fn(function (this: HTMLMediaElement) {
+    getState(this).paused = false;
+    this.dispatchEvent(new Event('play'));
+    return Promise.resolve();
+  });
+
+  HTMLMediaElement.prototype.pause = jest.fn(function (this: HTMLMediaElement) {
+    getState(this).paused = true;
+    this.dispatchEvent(new Event('pause'));
+  });
+
+  HTMLMediaElement.prototype.load = jest.fn();
+}
+
 // Create a more complete IndexedDB mock
 class IDBMockRequest {
   result = null;

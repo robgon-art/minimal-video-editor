@@ -1,7 +1,16 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import { VideoPanelViewProps } from './VideoPanelViewModel';
 import { fileSystem } from '../../services/storage/FileSystem';
 import { OperationType } from '../../services/storage/StorageOperations';
+
+// Define the ref interface
+export interface VideoPanelRef {
+    play: () => void;
+    pause: () => void;
+    stepForward: (frames?: number) => void;
+    stepBackward: (frames?: number) => void;
+    getCurrentTime: () => number;
+}
 
 // Helper to get MIME type from file extension
 const getMimeType = (filePath: string): string => {
@@ -23,12 +32,12 @@ const getMimeType = (filePath: string): string => {
 };
 
 // Pure presentational component
-const VideoPanelView: React.FC<VideoPanelViewProps> = ({
+const VideoPanelView = forwardRef<VideoPanelRef, VideoPanelViewProps>(({
     clip,
     currentTime,
     timecode,
     testEnv
-}) => {
+}, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [videoUrl, setVideoUrl] = useState<string | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(false);
@@ -36,6 +45,59 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
     const [retryCount, setRetryCount] = useState(0);
     // Use test maxRetries if provided, otherwise default to 2
     const maxRetries = testEnv?.maxRetries !== undefined ? testEnv.maxRetries : 2;
+
+    // Expose control methods to parent components
+    useImperativeHandle(ref, () => ({
+        play: () => {
+            if (videoRef.current) {
+                console.log('▶️ Play video');
+                videoRef.current.play();
+            }
+        },
+        pause: () => {
+            if (videoRef.current) {
+                console.log('⏸️ Pause video');
+                videoRef.current.pause();
+            }
+        },
+        stepForward: (frames = 1) => {
+            if (videoRef.current) {
+                // Default to 24fps if not specified in the clip
+                const fps = clip?.fps || 24;
+                // Calculate time for a single frame
+                const frameDuration = 1 / fps;
+                // Move forward by the specified number of frames
+                const secondsToAdvance = frameDuration * frames;
+
+                const newTime = Math.min(
+                    videoRef.current.currentTime + secondsToAdvance,
+                    videoRef.current.duration || 0
+                );
+                console.log(`⏩ Step forward ${frames} frame(s) (${secondsToAdvance.toFixed(3)}s) from ${videoRef.current.currentTime.toFixed(3)} to ${newTime.toFixed(3)}`);
+                videoRef.current.currentTime = newTime;
+            }
+        },
+        stepBackward: (frames = 1) => {
+            if (videoRef.current) {
+                // Default to 24fps if not specified in the clip
+                const fps = clip?.fps || 24;
+                // Calculate time for a single frame
+                const frameDuration = 1 / fps;
+                // Move backward by the specified number of frames
+                const secondsToRetreat = frameDuration * frames;
+
+                const newTime = Math.max(
+                    videoRef.current.currentTime - secondsToRetreat,
+                    0
+                );
+                console.log(`⏪ Step backward ${frames} frame(s) (${secondsToRetreat.toFixed(3)}s) from ${videoRef.current.currentTime.toFixed(3)} to ${newTime.toFixed(3)}`);
+                videoRef.current.currentTime = newTime;
+            }
+        },
+        getCurrentTime: () => {
+            return videoRef.current?.currentTime || 0;
+        }
+    }), [clip]);
 
     // Log when component receives a clip prop
     useEffect(() => {
@@ -76,7 +138,7 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
             title: clip.title,
             filePath: clip.filePath || 'not set'
         }, null, 2));
-        
+
         setIsLoading(true);
 
         // Store current URL for cleanup in finally block
@@ -304,6 +366,6 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
             </div>
         </div>
     );
-};
+});
 
 export default VideoPanelView; 

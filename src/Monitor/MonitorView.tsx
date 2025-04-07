@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { MonitorViewProps } from './MonitorViewModel';
-import VideoPanelView from './VideoPanel/VideoPanelView';
+import VideoPanelView, { VideoPanelRef } from './VideoPanel/VideoPanelView';
 import TimeRulerView from './TimeRuler/TimeRulerView';
 import TransportControlView from './TransportControl/TransportControlView';
 import './Monitor.css';
@@ -20,8 +20,14 @@ const MonitorView: React.FC<EnhancedMonitorViewProps> = ({
     videoPanelProps,
     timeRulerProps,
     transportControlProps,
-    onDropClip
+    onDropClip,
+    videoPanelRef
 }) => {
+    // Create video panel ref if one wasn't provided
+    const internalVideoPanelRef = useRef<VideoPanelRef>(null);
+    // Use provided ref or fallback to internal ref
+    const videoRef = videoPanelRef || internalVideoPanelRef;
+
     // Handle dragover event to allow dropping
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault(); // Necessary to allow dropping
@@ -76,7 +82,7 @@ const MonitorView: React.FC<EnhancedMonitorViewProps> = ({
                 )}
             </div>
             <div className="monitor-content">
-                <VideoPanelView {...videoPanelProps} />
+                <VideoPanelView ref={videoRef} {...videoPanelProps} />
                 <TimeRulerView {...timeRulerProps} />
                 <TransportControlView {...transportControlProps} />
             </div>

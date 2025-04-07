@@ -168,36 +168,80 @@ describe('EditorViewModel', () => {
         // This is the only test that really matters for our drag-and-drop functionality
         it('should configure the source monitor with drop clip handler', () => {
             // Setup clip viewer model with our mock clip
+            const onClipClickSpy = jest.fn();
+
             const mockClipViewerViewModel = {
+                // The clip needs to exist in the array for onClipClick to be called
                 clips: [mockClip],
                 isLoading: false,
                 errorMessage: null,
-                onClipClick: jest.fn(),
+                onClipClick: onClipClickSpy,
                 onAddClips: jest.fn()
             };
 
+            // Important: mock the useClipViewerViewModel to return our mock
             (useClipViewerViewModel as jest.Mock).mockReturnValue(mockClipViewerViewModel);
 
-            // Render the hook
-            renderHook(() => useEditorViewModel());
+            // Create a spy for the drop handler that we can inspect
+            const mockDropHandler = jest.fn();
 
-            // Check that useMonitorViewModel was called with the drop handler
-            const calls = (useMonitorViewModel as jest.Mock).mock.calls;
+            // Setup the useMonitorViewModel mock to capture the onDropClip argument
+            (useMonitorViewModel as jest.Mock).mockImplementation((title, clip, isPlaying, currentTime, duration, onTimeUpdate, onDropClip) => {
+                // For the Source monitor, save the drop handler for testing
+                if (title === 'Source' && onDropClip) {
+                    // Store a reference to the real function
+                    mockDropHandler.mockImplementation(onDropClip);
+                }
 
-            // The first call should be for the source monitor
-            expect(calls[0][0]).toBe('Source');
-
-            // The last argument (dropClipHandler) should be a function
-            const dropHandler = calls[0][calls[0].length - 1];
-            expect(typeof dropHandler).toBe('function');
-
-            // Call the handler inside act()
-            act(() => {
-                dropHandler(mockClip);
+                // Return a mock monitor props object
+                return {
+                    title,
+                    currentClip: clip,
+                    isPlaying,
+                    currentTime,
+                    duration,
+                    videoPanelProps: {
+                        clip,
+                        currentTime,
+                        timecode: '00:00:00:00'
+                    },
+                    timeRulerProps: {
+                        currentTime,
+                        duration,
+                        progress: 0,
+                        tickMarks: [],
+                        onTimeUpdate: jest.fn(),
+                        onProgressBarClick: jest.fn()
+                    },
+                    transportControlProps: {
+                        isPlaying,
+                        onPlayPauseClick: jest.fn(),
+                        onStepForwardClick: jest.fn(),
+                        onStepBackwardClick: jest.fn()
+                    }
+                };
             });
 
-            // It should call the onClipClick method from clipViewerViewModel
-            expect(mockClipViewerViewModel.onClipClick).toHaveBeenCalledWith(mockClip.id);
+            // Render the hook
+            const { result } = renderHook(() => useEditorViewModel());
+
+            // Reset spies before testing
+            onClipClickSpy.mockClear();
+            mockDropHandler.mockClear();
+
+            // Create a test clip to drop with same ID but different thumbnail
+            const droppedClip = {
+                ...mockClip,
+                thumbnailUrl: 'new-test-url'
+            };
+
+            // Call our captured drop handler
+            act(() => {
+                mockDropHandler(droppedClip);
+            });
+
+            // Verify the clip selection behavior
+            expect(onClipClickSpy).toHaveBeenCalledWith(mockClip.id);
         });
     });
 }); 
