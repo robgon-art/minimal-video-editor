@@ -50,20 +50,39 @@ const errorPatternsToFilter = [
   'Failed to generate thumbnail',
   'is not a function',
   'cannot read properties of undefined',
-  'FileSystem.ts'
+  'FileSystem.ts',
+  // Add specific test-generated errors that we expect
+  'Test error', // From our mock rejection
+  '[TEST_EXPECTED_ERROR]', // Special marker for errors we expect in tests
+  'Storage error' // From our catch block
 ];
 
 // Prevent specific errors from cluttering test output
 const originalConsoleError = console.error;
 console.error = (...args) => {
-  // Filter out known errors related to IndexedDB or storage operations
-  const errorMessage = JSON.stringify(args).toLowerCase();
+  // Special handling for test environment
+  if (process.env.NODE_ENV === 'test') {
+    // Convert args to string for checking
+    const errorMessage = JSON.stringify(args);
 
-  // Check if any of our patterns match the error message
-  if (errorPatternsToFilter.some(pattern =>
-    errorMessage.toLowerCase().includes(pattern.toLowerCase()))) {
-    // Silently ignore these errors
-    return;
+    // Check if any of our patterns match the error message
+    if (errorPatternsToFilter.some(pattern =>
+      errorMessage.toLowerCase().includes(pattern.toLowerCase()))) {
+      // Silently ignore expected test errors
+      return;
+    }
+
+    // Special handling for Error objects
+    for (const arg of args) {
+      if (arg instanceof Error && arg.message.includes('[TEST_EXPECTED_ERROR]')) {
+        return; // Ignore errors with our test marker
+      }
+      if (arg && typeof arg === 'object' && arg.stack &&
+        (String(arg.stack).includes('[TEST_EXPECTED_ERROR]') ||
+          String(arg.message).includes('[TEST_EXPECTED_ERROR]'))) {
+        return; // Ignore error-like objects with our test marker
+      }
+    }
   }
 
   // Show all other errors normally
@@ -73,19 +92,29 @@ console.error = (...args) => {
 // Also filter console.log messages related to thumbnail generation
 const originalConsoleLog = console.log;
 console.log = (...args) => {
-  // Convert args to string for checking
-  const logMessage = JSON.stringify(args).toLowerCase();
+  // Only filter in test environment
+  if (process.env.NODE_ENV === 'test') {
+    // Convert args to string for checking
+    const logMessage = JSON.stringify(args).toLowerCase();
 
-  // Filter out thumbnail-related logs
-  if (
-    logMessage.includes('thumbnail') ||
-    logMessage.includes('reading video file') ||
-    logMessage.includes('ensuring') ||
-    logMessage.includes('directory') ||
-    logMessage.includes('generating')
-  ) {
-    // Skip these logs
-    return;
+    // Filter out thumbnail-related logs and our debugging logs
+    if (
+      logMessage.includes('thumbnail') ||
+      logMessage.includes('reading video file') ||
+      logMessage.includes('ensuring') ||
+      logMessage.includes('directory') ||
+      logMessage.includes('generating') ||
+      // Add our debug emoji markers
+      logMessage.includes('🔍') || // Reading from storage
+      logMessage.includes('✅') || // Success
+      logMessage.includes('❌') || // Error
+      logMessage.includes('⚠️') || // Warning
+      logMessage.includes('🧹') || // Cleanup
+      logMessage.includes('🎬')    // Video creation
+    ) {
+      // Skip these logs in tests
+      return;
+    }
   }
 
   // Show other logs

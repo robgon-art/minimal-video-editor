@@ -16,8 +16,24 @@ const ClipListItem: React.FC<{ clip: any; onClipClick: (clip: any) => void }> = 
 
     // Make clip draggable
     const handleDragStart = (e: React.DragEvent) => {
-        // Store the clip data as serialized JSON in the dataTransfer object
-        e.dataTransfer.setData('application/json', JSON.stringify(clip));
+        // Fix thumbnail paths and ensure filePath is correctly set
+        const videoPath = clip.filePath || `/media/${clip.title}.mp4`;
+        const thumbnailPath = clip.thumbnailUrl.includes('/video_clip.png')
+            ? `/media/thumbnails/${clip.title}.jpg`
+            : clip.thumbnailUrl;
+
+        // Make sure filePath is included in the clip data for video playback
+        const clipWithFilePath = {
+            ...clip,
+            filePath: videoPath,
+            thumbnailUrl: thumbnailPath,
+            _dragSource: 'clipList' // Add source info for debugging
+        };
+
+        console.log('Dragging clip with data:', clipWithFilePath);
+
+        // Store the enhanced clip data as serialized JSON
+        e.dataTransfer.setData('application/json', JSON.stringify(clipWithFilePath));
 
         // Set a custom drag image
         if (clip.loadedThumbnailUrl || clip.thumbnailUrl) {

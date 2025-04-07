@@ -1,11 +1,23 @@
 import { useMemo } from 'react';
 import { Clip } from '../../Clip/ClipModel';
 
-// Props for the VideoPanel view
+/**
+ * View model props for the video panel
+ */
 export interface VideoPanelViewProps {
-    clip: Clip | null;
+    /** Current clip being displayed */
+    clip: any;
+    /** Current time position in seconds */
     currentTime: number;
+    /** Formatted timecode string */
     timecode: string;
+    /** Optional test environment configuration for testing */
+    testEnv?: {
+        /** Maximum number of retries for loading video */
+        maxRetries?: number;
+        /** Flag to prevent fallback to direct URL in tests */
+        preventFallback?: boolean;
+    };
 }
 
 // Pure transformation function to format timecode (HH:MM:SS:FF)

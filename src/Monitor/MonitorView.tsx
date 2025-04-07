@@ -38,6 +38,18 @@ const MonitorView: React.FC<EnhancedMonitorViewProps> = ({
                 const clip = JSON.parse(clipJson);
                 console.log('Clip dropped into monitor:', clip);
 
+                // Validate clip data
+                if (!clip.id || !clip.title) {
+                    console.error('Invalid clip data dropped:', clip);
+                    return;
+                }
+
+                // Ensure filePath is correctly set
+                if (!clip.filePath) {
+                    console.warn('Clip dropped without filePath, deriving from title');
+                    clip.filePath = `/media/${clip.title}.mp4`;
+                }
+
                 // Call the callback if provided
                 if (onDropClip) {
                     onDropClip(clip);
