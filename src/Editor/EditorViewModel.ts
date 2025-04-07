@@ -42,15 +42,36 @@ export const useEditorViewModel = () => {
         // Don't update loadedClip here - keep it separate from selection
     }, [clips]);
 
+    // Handle single click (just select the clip but don't load it)
+    const handleClipClick = useCallback((clipId: string) => {
+        // Just call the original onClipClick to update selection in clip viewer
+        console.log('Single click selecting clip, not loading into monitor');
+        clipViewerViewModel.onClipClick(clipId);
+    }, [clipViewerViewModel]);
+
+    // Handle double click (load the clip into the monitor)
+    const handleClipDoubleClick = useCallback((clip: Clip) => {
+        // First, call the original onClipClick to update selection in clip viewer
+        console.log('Double click loading clip into monitor:', clip.title);
+        clipViewerViewModel.onClipClick(clip.id);
+
+        // Load it into the monitor
+        setLoadedClip(clip);
+        // Reset playback position
+        setSourceCurrentTime(0);
+        // Ensure playback is stopped
+        setSourceIsPlaying(false);
+    }, [clipViewerViewModel]);
+
     // Handler for when a clip is dropped in the source monitor
     const handleDropInSourceMonitor = useCallback((droppedClip: Clip) => {
         // Find the clip in our list to ensure we have the latest version
         const clipInList = clips.find(clip => clip.id === droppedClip.id);
-        
+
         if (clipInList) {
             // Set this clip as selected in the clip viewer
             clipViewerViewModel.onClipClick(clipInList.id);
-            
+
             // Also load it into the monitor - make sure we preserve the thumbnail URLs
             const clipToLoad = {
                 ...clipInList,
@@ -59,9 +80,9 @@ export const useEditorViewModel = () => {
                 // Keep loadedThumbnailUrl if it exists
                 loadedThumbnailUrl: droppedClip.loadedThumbnailUrl || clipInList.loadedThumbnailUrl
             };
-            
+
             console.log('Loading clip into monitor with thumbnail:', clipToLoad.thumbnailUrl);
-            
+
             setLoadedClip(clipToLoad);
             // Reset playback position
             setSourceCurrentTime(0);
@@ -154,16 +175,23 @@ export const useEditorViewModel = () => {
         handleProgramStepBackward
     );
 
+    // Create clipViewerProps with our custom handlers
+    const clipViewerProps = useMemo(() => ({
+        ...clipViewerViewModel,
+        onClipClick: handleClipClick, // Override with our click handler
+        onDoubleClick: handleClipDoubleClick // Add our double-click handler
+    }), [clipViewerViewModel, handleClipClick, handleClipDoubleClick]);
+
     // App title
     const title = "Video Editor App";
 
     return useMemo(() =>
         createEditorViewProps(
             title,
-            clipViewerViewModel,
+            clipViewerProps,
             sourceMonitorProps,
             programMonitorProps
         ),
-        [title, clipViewerViewModel, sourceMonitorProps, programMonitorProps]
+        [title, clipViewerProps, sourceMonitorProps, programMonitorProps]
     );
 }; 

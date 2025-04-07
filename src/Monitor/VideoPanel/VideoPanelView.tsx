@@ -37,6 +37,15 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
     // Use test maxRetries if provided, otherwise default to 2
     const maxRetries = testEnv?.maxRetries !== undefined ? testEnv.maxRetries : 2;
 
+    // Log when component receives a clip prop
+    useEffect(() => {
+        console.log('🎬 VideoPanelView received clip prop:', clip ? {
+            id: clip.id,
+            title: clip.title,
+            filePath: clip.filePath
+        } : 'null');
+    }, [clip]);
+
     // For testing: force error state if flag is set
     useEffect(() => {
         if (testEnv?.forceErrorState) {
@@ -56,9 +65,18 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
         setError(null);
         setRetryCount(0);
 
-        if (!clip) return;
+        if (!clip) {
+            console.log('⚠️ No clip provided to VideoPanel, skipping video load');
+            return;
+        }
 
-        console.log('Loading clip:', clip);
+        console.log('🔄 Starting video load process for clip:', clip.id, clip.title);
+        console.log('🔄 Clip data for loading:', JSON.stringify({
+            id: clip.id,
+            title: clip.title,
+            filePath: clip.filePath || 'not set'
+        }, null, 2));
+        
         setIsLoading(true);
 
         // Store current URL for cleanup in finally block
@@ -148,10 +166,12 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
         if (videoRef.current) {
             // Always seek precisely when at the beginning to ensure first frame is shown
             if (currentTime === 0) {
+                console.log('🎞️ Seeking video to beginning (currentTime = 0)');
                 videoRef.current.currentTime = 0;
             }
             // For other times, only seek if the difference is significant
             else if (Math.abs(videoRef.current.currentTime - currentTime) > 0.1) {
+                console.log(`🎞️ Seeking video from ${videoRef.current.currentTime} to ${currentTime}`);
                 videoRef.current.currentTime = currentTime;
             }
         }
@@ -211,6 +231,8 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
                 src={videoUrl}
                 poster={bestThumbnail}
                 controls
+                preload="auto"
+                autoPlay={false}
                 style={{
                     width: '100%',
                     height: '100%',
@@ -219,12 +241,15 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
                     backgroundColor: '#000'
                 }}
                 onError={handleVideoError}
+                onLoadStart={() => console.log('🎬 Video load started for:', videoUrl)}
+                onLoadedMetadata={() => console.log('🎬 Video metadata loaded:', videoRef.current?.duration, 'seconds')}
                 onLoadedData={(e) => {
                     console.log("✅ Video loaded successfully:", videoUrl);
                     console.log("✅ Video dimensions:", videoRef.current?.videoWidth, "x", videoRef.current?.videoHeight);
 
                     // Seek to the first frame immediately
                     const videoElement = e.currentTarget;
+                    console.log("✅ Seeking to first frame...");
                     videoElement.currentTime = 0;
 
                     // After seeking to first frame, capture it as a high-res thumbnail

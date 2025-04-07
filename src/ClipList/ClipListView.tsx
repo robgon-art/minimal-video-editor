@@ -5,7 +5,11 @@ import { useClipViewModel } from '../Clip/ClipViewModel';
 import { useClipsWithThumbnails } from './ClipListViewModel';
 
 // Separate component for each clip item
-const ClipListItem: React.FC<{ clip: any; onClipClick: (id: string) => void }> = ({ clip, onClipClick }) => {
+const ClipListItem: React.FC<{
+    clip: any;
+    onClipClick: (id: string) => void;
+    onDoubleClick?: (clip: any) => void;
+}> = ({ clip, onClipClick, onDoubleClick }) => {
     // Use the loaded thumbnail if available
     const clipWithRealThumbnail = {
         ...clip,
@@ -14,9 +18,27 @@ const ClipListItem: React.FC<{ clip: any; onClipClick: (id: string) => void }> =
 
     // Pass the enhanced onClipClick handler that includes clip ID
     const enhancedOnClipClick = (clipId: string) => {
-        console.log('Clip clicked with ID:', clipId);
+        console.log('🔔 REGULAR CLICK EVENT TRIGGERED');
+        console.log('🔔 Clip clicked with ID:', clipId);
+        console.log('🔔 Original clip ID:', clip.id);
+        console.log('🔔 Calling onClipClick with ID:', clipId);
         // Make sure onClipClick is called with the ID
         onClipClick(clipId);
+        console.log('🔔 onClipClick handler called');
+    };
+
+    // Handle double click to load clip into source monitor
+    const handleDoubleClick = () => {
+        console.log('📌 DOUBLE CLICK EVENT TRIGGERED');
+        console.log('📌 Clip double-clicked with ID:', clip.id);
+        console.log('📌 Clip details:', JSON.stringify(clip, null, 2));
+
+        // Call the dedicated double-click handler if provided
+        if (onDoubleClick) {
+            console.log('📌 Calling onDoubleClick with clip');
+            onDoubleClick(clip);
+            console.log('📌 onDoubleClick handler called');
+        }
     };
 
     const clipProps = useClipViewModel(clipWithRealThumbnail, enhancedOnClipClick);
@@ -85,6 +107,7 @@ const ClipListItem: React.FC<{ clip: any; onClipClick: (id: string) => void }> =
         <div
             draggable
             onDragStart={handleDragStart}
+            onDoubleClick={handleDoubleClick}
             className="clip-list-item"
             data-testid={`clip-list-item-${clip.id}`}
         >
@@ -94,9 +117,17 @@ const ClipListItem: React.FC<{ clip: any; onClipClick: (id: string) => void }> =
 };
 
 // Pure presentational component for the clip list
-const ClipListView: React.FC<ClipListViewProps> = ({ clips, onClipClick }) => {
+const ClipListView: React.FC<ClipListViewProps & { onDoubleClick?: (clip: any) => void }> = ({
+    clips,
+    onClipClick,
+    onDoubleClick
+}) => {
     // Use our hook to get clips with real thumbnails
     const clipsWithThumbnails = useClipsWithThumbnails(clips);
+
+    console.log('🔍 ClipListView rendered with', clipsWithThumbnails.length, 'clips');
+    console.log('🔍 onClipClick handler provided:', !!onClipClick);
+    console.log('🔍 onDoubleClick handler provided:', !!onDoubleClick);
 
     return (
         <div className="clip-list" data-testid="clip-list">
@@ -105,6 +136,7 @@ const ClipListView: React.FC<ClipListViewProps> = ({ clips, onClipClick }) => {
                     key={clip.id}
                     clip={clip}
                     onClipClick={onClipClick}
+                    onDoubleClick={onDoubleClick}
                 />
             ))}
         </div>

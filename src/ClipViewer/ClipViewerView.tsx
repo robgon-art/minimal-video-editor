@@ -5,15 +5,16 @@ import { useClipListViewModel } from '../ClipList/ClipListViewModel';
 import './ClipViewer.css';
 
 // Pure presentational component
-const ClipViewerView: React.FC<ClipViewerViewProps> = ({
+const ClipViewerView: React.FC<ClipViewerViewProps & { onDoubleClick?: any }> = ({
     clips,
     isLoading,
     errorMessage,
     onClipClick,
-    onAddClips
+    onAddClips,
+    onDoubleClick
 }) => {
     // Use ClipList view model to prepare props for the ClipList component
-    const clipListProps = useClipListViewModel(clips, onClipClick);
+    const clipListProps = useClipListViewModel(clips, onClipClick, onDoubleClick);
 
     return (
         <div className="clip-viewer" data-testid="clip-viewer">

@@ -6,25 +6,29 @@ import { createThumbnailUrl } from '../services/media/MediaTransforms';
 export interface ClipListViewProps {
     clips: Clip[];
     onClipClick: (id: string) => void;
+    onDoubleClick?: (clip: Clip) => void;
 }
 
 // Pure function to create view props (can be tested independently of React)
 export const createClipListViewProps = (
     clips: Clip[],
-    onClipClick: (id: string) => void
+    onClipClick: (id: string) => void,
+    onDoubleClick?: (clip: Clip) => void
 ): ClipListViewProps => ({
     clips,
-    onClipClick
+    onClipClick,
+    onDoubleClick
 });
 
 // Hook that wraps view props generation
 export const useClipListViewModel = (
     clips: Clip[],
-    onClipClick: (id: string) => void
+    onClipClick: (id: string) => void,
+    onDoubleClick?: (clip: Clip) => void
 ): ClipListViewProps => {
     return useMemo(() =>
-        createClipListViewProps(clips, onClipClick),
-        [clips, onClipClick]
+        createClipListViewProps(clips, onClipClick, onDoubleClick),
+        [clips, onClipClick, onDoubleClick]
     );
 };
 
