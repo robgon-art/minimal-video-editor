@@ -33,7 +33,7 @@ This application is built using MVVM (Model-View-ViewModel) architecture with a 
 
 1. Install dependencies:
    ```
-   npm install
+   npm install --legacy-peer-deps
    ```
 
 2. Start the development server:
