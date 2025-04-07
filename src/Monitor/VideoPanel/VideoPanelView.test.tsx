@@ -516,4 +516,310 @@ describe('VideoPanelView', () => {
         // Should create a new URL for the new video
         expect(URL.createObjectURL).toHaveBeenCalled();
     });
+
+    // New test for ref methods
+    it('should expose and properly execute ref methods', async () => {
+        // Setup video element mocks
+        let videoCurrentTime = 0;
+        let videoDuration = 60;
+        let videoPlayed = false;
+        let videoPaused = false;
+
+        Object.defineProperty(HTMLVideoElement.prototype, 'currentTime', {
+            configurable: true,
+            get: function () { return videoCurrentTime; },
+            set: function (value) { videoCurrentTime = value; }
+        });
+
+        Object.defineProperty(HTMLVideoElement.prototype, 'duration', {
+            configurable: true,
+            get: function () { return videoDuration; }
+        });
+
+        HTMLMediaElement.prototype.play = jest.fn().mockImplementation(() => {
+            videoPlayed = true;
+            return Promise.resolve();
+        });
+
+        HTMLMediaElement.prototype.pause = jest.fn().mockImplementation(() => {
+            videoPaused = true;
+        });
+
+        // Create ref to access component methods
+        const ref = React.createRef<any>();
+
+        render(
+            <VideoPanelView
+                ref={ref}
+                clip={{
+                    ...mockClip,
+                    fps: 30 // Explicitly set fps for predictable frame navigation
+                }}
+                currentTime={0}
+                timecode="00:00:00:00"
+                testEnv={TEST_ENV}
+            />
+        );
+
+        // Wait for video to load
+        await waitFor(() => {
+            expect(screen.getByTestId('video-player')).toBeInTheDocument();
+        });
+
+        // Test play method
+        act(() => {
+            ref.current.play();
+        });
+        expect(videoPlayed).toBe(true);
+
+        // Test pause method
+        act(() => {
+            ref.current.pause();
+        });
+        expect(videoPaused).toBe(true);
+
+        // Test getCurrentTime method
+        videoCurrentTime = 15;
+        expect(ref.current.getCurrentTime()).toBe(15);
+
+        // Test stepForward method - with default frames (1)
+        act(() => {
+            ref.current.stepForward();
+        });
+        // At 30fps, one frame is 1/30 = 0.0333... seconds
+        expect(videoCurrentTime).toBeCloseTo(15 + (1 / 30), 4);
+
+        // Test stepForward with specific frames count
+        act(() => {
+            ref.current.stepForward(5);
+        });
+        // Adding 5 frames at 30fps (5/30 = 0.166... seconds)
+        expect(videoCurrentTime).toBeCloseTo(15 + (1 / 30) + (5 / 30), 4);
+
+        // Test stepBackward method - with default frames (1)
+        videoCurrentTime = 20;
+        act(() => {
+            ref.current.stepBackward();
+        });
+        expect(videoCurrentTime).toBeCloseTo(20 - (1 / 30), 4);
+
+        // Test stepBackward with specific frames count
+        act(() => {
+            ref.current.stepBackward(5);
+        });
+        expect(videoCurrentTime).toBeCloseTo(20 - (1 / 30) - (5 / 30), 4);
+
+        // Test stepForward at the end of video
+        videoCurrentTime = 59.9;
+        act(() => {
+            ref.current.stepForward(10); // Try to go beyond the end
+        });
+        expect(videoCurrentTime).toBe(videoDuration); // Should cap at duration
+
+        // Test stepBackward at the beginning of video
+        videoCurrentTime = 0.05;
+        act(() => {
+            ref.current.stepBackward(10); // Try to go before the beginning
+        });
+        expect(videoCurrentTime).toBe(0); // Should cap at 0
+    });
+
+    // Test for missing filePath scenario
+    it('should handle clip with no filePath but with title', async () => {
+        const clipWithoutPath = {
+            ...mockClip,
+            filePath: undefined // Remove the filepath
+        };
+
+        render(
+            <VideoPanelView
+                clip={clipWithoutPath}
+                currentTime={0}
+                timecode="00:00:00:00"
+                testEnv={TEST_ENV}
+            />
+        );
+
+        // Wait for video to load
+        await waitFor(() => {
+            expect(screen.getByTestId('video-player')).toBeInTheDocument();
+        });
+
+        // Check that it attempted to load the video using the title
+        expect(fileSystem.executeOperation).toHaveBeenCalledWith(
+            expect.objectContaining({
+                path: expect.stringContaining(mockClip.title)
+            })
+        );
+    });
+
+    // Test for thumbnail usage
+    it('should use thumbnailUrl as video poster', async () => {
+        render(
+            <VideoPanelView
+                clip={mockClip}
+                currentTime={0}
+                timecode="00:00:00:00"
+                testEnv={TEST_ENV}
+            />
+        );
+
+        // Wait for video to load
+        await waitFor(() => {
+            expect(screen.getByTestId('video-player')).toBeInTheDocument();
+        });
+
+        // Check that the poster attribute uses the thumbnailUrl
+        const videoElement = screen.getByTestId('video-player');
+        expect(videoElement).toHaveAttribute('poster', mockClip.thumbnailUrl);
+    });
+
+    // Test with high-quality thumbnail
+    it('should use loadedThumbnailUrl as poster when available', async () => {
+        const clipWithLoadedThumbnail = {
+            ...mockClip,
+            loadedThumbnailUrl: 'high-quality-thumbnail-url',
+            thumbnailUrl: 'regular-thumbnail-url'
+        };
+
+        render(
+            <VideoPanelView
+                clip={clipWithLoadedThumbnail}
+                currentTime={0}
+                timecode="00:00:00:00"
+                testEnv={TEST_ENV}
+            />
+        );
+
+        // Wait for video to load
+        await waitFor(() => {
+            expect(screen.getByTestId('video-player')).toBeInTheDocument();
+        });
+
+        // Check that the poster attribute uses the loadedThumbnailUrl
+        const videoElement = screen.getByTestId('video-player');
+        expect(videoElement).toHaveAttribute('poster', 'high-quality-thumbnail-url');
+    });
+
+    // Test the first frame capture functionality
+    it('should attempt to capture first frame on video load', async () => {
+        // Mock canvas and context for first frame capture
+        const mockCanvas = {
+            width: 0,
+            height: 0,
+            toDataURL: jest.fn().mockReturnValue('data:image/jpeg;base64,mock'),
+            getContext: jest.fn()
+        };
+
+        const mockContext = {
+            drawImage: jest.fn()
+        };
+
+        // Save original createElement to restore later
+        const originalCreateElement = document.createElement;
+
+        // Properly mock createElement to avoid recursive issues
+        document.createElement = jest.fn().mockImplementation((tagName) => {
+            if (tagName === 'canvas') {
+                return mockCanvas;
+            }
+            return originalCreateElement.call(document, tagName);
+        });
+
+        mockCanvas.getContext.mockReturnValue(mockContext);
+
+        // Mock video element properties for first frame capture
+        Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', {
+            configurable: true,
+            get: function () { return 1280; }
+        });
+
+        Object.defineProperty(HTMLVideoElement.prototype, 'videoHeight', {
+            configurable: true,
+            get: function () { return 720; }
+        });
+
+        try {
+            render(
+                <VideoPanelView
+                    clip={mockClip}
+                    currentTime={0}
+                    timecode="00:00:00:00"
+                    testEnv={TEST_ENV}
+                />
+            );
+
+            // Wait for video to load
+            await waitFor(() => {
+                expect(screen.getByTestId('video-player')).toBeInTheDocument();
+            });
+
+            // Trigger loadedData event to initiate first frame capture
+            const videoElement = screen.getByTestId('video-player');
+            fireEvent.loadedData(videoElement);
+
+            // Force seeking event (normally this would happen after setting currentTime)
+            fireEvent.seeked(videoElement);
+
+            // Verify canvas was created and used
+            expect(document.createElement).toHaveBeenCalledWith('canvas');
+            expect(mockCanvas.getContext).toHaveBeenCalledWith('2d');
+            expect(mockContext.drawImage).toHaveBeenCalled();
+            expect(mockCanvas.toDataURL).toHaveBeenCalled();
+        } finally {
+            // Restore original createElement
+            document.createElement = originalCreateElement;
+        }
+    });
+
+    // Test handling error during first frame capture
+    it('should handle errors during first frame capture', async () => {
+        // Mock console.warn to verify error logging
+        const originalConsoleWarn = console.warn;
+        console.warn = jest.fn();
+
+        // Save original createElement to restore later
+        const originalCreateElement = document.createElement;
+
+        // Make canvas throw an error when used
+        document.createElement = jest.fn().mockImplementation((tagName) => {
+            if (tagName === 'canvas') {
+                throw new Error('Canvas not supported');
+            }
+            return originalCreateElement.call(document, tagName);
+        });
+
+        try {
+            render(
+                <VideoPanelView
+                    clip={mockClip}
+                    currentTime={0}
+                    timecode="00:00:00:00"
+                    testEnv={TEST_ENV}
+                />
+            );
+
+            // Wait for video to load
+            await waitFor(() => {
+                expect(screen.getByTestId('video-player')).toBeInTheDocument();
+            });
+
+            // Trigger loadedData event
+            const videoElement = screen.getByTestId('video-player');
+            fireEvent.loadedData(videoElement);
+
+            // Trigger seeked event
+            fireEvent.seeked(videoElement);
+
+            // Verify error was logged
+            expect(console.warn).toHaveBeenCalledWith(
+                expect.stringContaining('Error capturing first frame'),
+                expect.anything()
+            );
+        } finally {
+            // Restore console.warn and createElement
+            console.warn = originalConsoleWarn;
+            document.createElement = originalCreateElement;
+        }
+    });
 }); 

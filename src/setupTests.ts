@@ -199,7 +199,7 @@ console.log = (...args) => {
       logMessage.includes('generating') ||
       logMessage.includes('clicked') ||
       // Filter all emoji-prefixed logs in tests
-      /["'][🔍🔄🎞️✅❌⚠️🧹🎬🔔🎞️]["']/.test(logMessage) ||
+      /["'][🔍🔄🎞️✅❌⚠️🧹🎬🔔🎞️▶️⏸️⏩⏪]["']/.test(logMessage) ||
       // Add our debug emoji markers
       logMessage.includes('🔍') || // Reading from storage
       logMessage.includes('🔄') || // Loading/processing
@@ -209,7 +209,15 @@ console.log = (...args) => {
       logMessage.includes('🧹') || // Cleanup
       logMessage.includes('🎬') || // Video creation
       logMessage.includes('🔔') || // Events
-      logMessage.includes('🎞️')   // Media operations
+      logMessage.includes('🎞️') || // Media operations
+      logMessage.includes('▶️') || // Play video
+      logMessage.includes('⏸️') || // Pause video
+      logMessage.includes('⏩') || // Step forward
+      logMessage.includes('⏪') || // Step backward
+      logMessage.includes('play video') ||
+      logMessage.includes('pause video') ||
+      logMessage.includes('step forward') ||
+      logMessage.includes('step backward')
     ) {
       // Skip these logs in tests
       return;

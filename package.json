@@ -21,9 +21,9 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build",
-    "test": "craco test",
-    "test:coverage": "craco test --coverage --watchAll=false",
-    "test:verbose": "craco test --verbose",
+    "test": "cross-env TEST_LOGGING=false craco test",
+    "test:coverage": "cross-env TEST_LOGGING=false craco test --coverage --watchAll=false",
+    "test:verbose": "cross-env TEST_LOGGING=true craco test --verbose",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -46,11 +46,13 @@
   },
   "devDependencies": {
     "@craco/craco": "^7.1.0",
+    "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/react-hooks": "^8.0.1",
     "@types/fluent-ffmpeg": "^2.1.27",
     "buffer": "^6.0.3",
+    "cross-env": "^7.0.3",
     "fake-indexeddb": "^6.0.0",
     "os-browserify": "^0.3.0",
     "path-browserify": "^1.0.1",
