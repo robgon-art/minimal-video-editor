@@ -147,7 +147,12 @@ const errorPatternsToFilter = [
   // Add specific test-generated errors that we expect
   'Test error', // From our mock rejection
   '[TEST_EXPECTED_ERROR]', // Special marker for errors we expect in tests
-  'Storage error' // From our catch block
+  'Storage error', // From our catch block
+  // React 18 compatibility warnings
+  'ReactDOMTestUtils.act is deprecated',
+  'ReactDOM.render is no longer supported in React 18',
+  'unmountComponentAtNode is deprecated',
+  'createRoot'
 ];
 
 // Prevent specific errors from cluttering test output
@@ -155,7 +160,19 @@ const originalConsoleError = console.error;
 console.error = (...args) => {
   // Skip filtering if test logging is explicitly enabled
   if (!TEST_LOGGING_ENABLED && process.env.NODE_ENV === 'test') {
-    // Convert args to string for checking
+    // Direct string check for specific React warnings
+    if (args.length > 0 && typeof args[0] === 'string') {
+      if (
+        args[0].includes('ReactDOMTestUtils.act') ||
+        args[0].includes('ReactDOM.render is no longer supported') ||
+        args[0].includes('unmountComponentAtNode is deprecated') ||
+        args[0].includes('createRoot')
+      ) {
+        return; // Filter out React 18 warnings directly
+      }
+    }
+
+    // Convert args to string for checking other patterns
     const errorMessage = JSON.stringify(args);
 
     // Check if any of our patterns match the error message
