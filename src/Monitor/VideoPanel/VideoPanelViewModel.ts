@@ -17,11 +17,18 @@ export interface VideoPanelViewProps {
         maxRetries?: number;
         /** Flag to prevent fallback to direct URL in tests */
         preventFallback?: boolean;
+        /** Flag to force error state for testing */
+        forceErrorState?: boolean;
     };
 }
 
 // Pure transformation function to format timecode (HH:MM:SS:FF)
 export const formatTimecode = (seconds: number): string => {
+    // Handle negative values by treating them as 0
+    if (seconds < 0) {
+        seconds = 0;
+    }
+
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);

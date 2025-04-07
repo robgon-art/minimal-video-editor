@@ -37,6 +37,13 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
     // Use test maxRetries if provided, otherwise default to 2
     const maxRetries = testEnv?.maxRetries !== undefined ? testEnv.maxRetries : 2;
 
+    // For testing: force error state if flag is set
+    useEffect(() => {
+        if (testEnv?.forceErrorState) {
+            setError('Failed to load video. Using thumbnail instead.');
+        }
+    }, [testEnv?.forceErrorState]);
+
     // Load video when clip changes and clean up on unmount
     useEffect(() => {
         // Clean up previous URL if it exists
@@ -198,7 +205,10 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
                     // Force play after load to ensure we see the video
                     const videoElement = e.currentTarget;
                     videoElement.play().catch(playError => {
-                        console.warn("⚠️ Autoplay failed, may need user interaction:", playError);
+                        // Only show warning in non-test environment
+                        if (!testEnv) {
+                            console.warn("⚠️ Autoplay failed, may need user interaction:", playError);
+                        }
                     });
                 }}
             >
