@@ -66,6 +66,12 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
 
         const loadVideo = async () => {
             try {
+                // Ensure the clip has a valid filePath
+                if (!clip.filePath && clip.title) {
+                    console.log('⚠️ No filePath provided, using title to construct path:', clip.title);
+                    clip.filePath = `/media/${clip.title}.mp4`;
+                }
+
                 // Determine the correct path for the video
                 const videoPath = clip.filePath || `/media/${clip.title}.mp4`;
                 console.log('⚠️ Attempting to load video from path:', videoPath, 'Clip data:', clip);
@@ -139,8 +145,15 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
 
     // Sync video's current time with the monitored currentTime
     useEffect(() => {
-        if (videoRef.current && Math.abs(videoRef.current.currentTime - currentTime) > 0.1) {
-            videoRef.current.currentTime = currentTime;
+        if (videoRef.current) {
+            // Always seek precisely when at the beginning to ensure first frame is shown
+            if (currentTime === 0) {
+                videoRef.current.currentTime = 0;
+            }
+            // For other times, only seek if the difference is significant
+            else if (Math.abs(videoRef.current.currentTime - currentTime) > 0.1) {
+                videoRef.current.currentTime = currentTime;
+            }
         }
     }, [currentTime]);
 
@@ -159,7 +172,10 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
         if (!clip) {
             return (
                 <div className="no-video-placeholder" data-testid="no-video-placeholder">
-                    No video to display
+                    <div className="no-video-message">
+                        <div>No clip loaded</div>
+                        <div className="no-video-hint">Drag and drop a clip to load it</div>
+                    </div>
                 </div>
             );
         }
@@ -169,10 +185,13 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
         }
 
         if (error) {
+            // Get the best available thumbnail for error state too
+            const bestThumbnail = clip.loadedThumbnailUrl || clip.thumbnailUrl;
+
             return (
                 <div className="video-fallback">
                     <img
-                        src={clip.thumbnailUrl}
+                        src={bestThumbnail}
                         alt={clip.title}
                         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     />
@@ -181,15 +200,17 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
             );
         }
 
+        // Get the best available thumbnail
+        const bestThumbnail = clip.loadedThumbnailUrl || clip.thumbnailUrl;
+
         return (
             <video
                 ref={videoRef}
                 className="video-player"
                 data-testid="video-player"
                 src={videoUrl}
-                poster={clip.thumbnailUrl}
+                poster={bestThumbnail}
                 controls
-                autoPlay
                 style={{
                     width: '100%',
                     height: '100%',
@@ -202,12 +223,38 @@ const VideoPanelView: React.FC<VideoPanelViewProps> = ({
                     console.log("✅ Video loaded successfully:", videoUrl);
                     console.log("✅ Video dimensions:", videoRef.current?.videoWidth, "x", videoRef.current?.videoHeight);
 
-                    // Force play after load to ensure we see the video
+                    // Seek to the first frame immediately
                     const videoElement = e.currentTarget;
-                    videoElement.play().catch(playError => {
-                        // Only show warning in non-test environment
-                        if (!testEnv) {
-                            console.warn("⚠️ Autoplay failed, may need user interaction:", playError);
+                    videoElement.currentTime = 0;
+
+                    // After seeking to first frame, capture it as a high-res thumbnail
+                    videoElement.addEventListener('seeked', function onSeeked() {
+                        // Only run this once
+                        videoElement.removeEventListener('seeked', onSeeked);
+
+                        try {
+                            // Create a high-resolution canvas to capture the frame
+                            const canvas = document.createElement('canvas');
+                            const width = Math.max(640, videoElement.videoWidth);
+                            const height = Math.max(360, videoElement.videoHeight);
+                            canvas.width = width;
+                            canvas.height = height;
+
+                            // Draw the current frame (which is now the first frame)
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                                ctx.drawImage(videoElement, 0, 0, width, height);
+
+                                // Convert to a high-quality data URL
+                                const firstFrameUrl = canvas.toDataURL('image/jpeg', 0.95);
+
+                                // Update the poster with this high-res first frame
+                                videoElement.poster = firstFrameUrl;
+
+                                console.log("✅ Captured first frame as high-res thumbnail");
+                            }
+                        } catch (error) {
+                            console.warn("⚠️ Error capturing first frame:", error);
                         }
                     });
                 }}

@@ -1,10 +1,22 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useEditorViewModel, createEditorViewProps } from './EditorViewModel';
 import { Clip } from '../Clip/ClipModel';
 import { VideoPanelViewProps } from '../Monitor/VideoPanel/VideoPanelViewModel';
 import { TimeRulerViewProps } from '../Monitor/TimeRuler/TimeRulerViewModel';
 import { TransportControlViewProps } from '../Monitor/TransportControl/TransportControlViewModel';
 import React from 'react';
+
+// Suppress React act warnings
+const originalError = console.error;
+console.error = function (...args) {
+    if (args[0] && typeof args[0] === 'string' && (
+        args[0].includes('Warning: An update to') ||
+        args[0].includes('not wrapped in act')
+    )) {
+        return; // Suppress React warnings in tests
+    }
+    originalError.apply(console, args);
+};
 
 // Mock the hook modules
 jest.mock('../ClipViewer/ClipViewerViewModel', () => ({
@@ -179,8 +191,10 @@ describe('EditorViewModel', () => {
             const dropHandler = calls[0][calls[0].length - 1];
             expect(typeof dropHandler).toBe('function');
 
-            // Call the handler
-            dropHandler(mockClip);
+            // Call the handler inside act()
+            act(() => {
+                dropHandler(mockClip);
+            });
 
             // It should call the onClipClick method from clipViewerViewModel
             expect(mockClipViewerViewModel.onClipClick).toHaveBeenCalledWith(mockClip.id);

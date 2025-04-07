@@ -63,12 +63,17 @@ const MonitorView: React.FC<EnhancedMonitorViewProps> = ({
     return (
         <div
             className="monitor"
-            data-testid="monitor"
+            data-testid={`monitor-${title.toLowerCase()}`}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
         >
             <div className="monitor-header">
                 <h3>{title}</h3>
+                {!currentClip && (
+                    <div className="monitor-empty-message">
+                        Drag and drop a clip here to load it
+                    </div>
+                )}
             </div>
             <div className="monitor-content">
                 <VideoPanelView {...videoPanelProps} />

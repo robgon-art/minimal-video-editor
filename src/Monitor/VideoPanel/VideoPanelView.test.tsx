@@ -464,10 +464,8 @@ describe('VideoPanelView', () => {
         const videoElement = screen.getByTestId('video-player');
         fireEvent.loadedData(videoElement);
 
-        // Play should have been called
-        expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
-
-        // Component should still be rendered correctly despite autoplay failure
+        // We no longer call play() automatically, so this test is modified
+        // Just verify the component renders correctly
         expect(screen.getByTestId('video-panel')).toBeInTheDocument();
     });
 

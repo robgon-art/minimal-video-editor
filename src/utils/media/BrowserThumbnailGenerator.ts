@@ -90,9 +90,9 @@ export const generateThumbnail = async (videoPath: string, outputPath: string): 
             // Once video metadata is loaded, seek to desired position and capture frame
             video.onloadedmetadata = () => {
                 console.log('Video metadata loaded. Duration:', video.duration, 'seconds');
-                // Seek to 10% of the video duration
-                const seekTime = video.duration * 0.1;
-                console.log('Seeking to position:', seekTime, 'seconds');
+                // Seek to the first frame (0 seconds) for consistency with monitor view
+                const seekTime = 0;
+                console.log('Seeking to first frame at position:', seekTime, 'seconds');
                 video.currentTime = seekTime;
 
                 // When seeked, capture the frame
@@ -101,11 +101,12 @@ export const generateThumbnail = async (videoPath: string, outputPath: string): 
                         console.log('Video seeked successfully, capturing frame...');
                         // Create canvas to draw the video frame
                         const canvas = document.createElement('canvas');
-                        const targetWidth = 320;
+                        // Use higher resolution for better quality thumbnails
+                        const targetWidth = 640;
                         // Calculate height based on video's aspect ratio
                         const aspectRatio = video.videoWidth / video.videoHeight;
                         const targetHeight = Math.round(targetWidth / aspectRatio);
-                        
+
                         canvas.width = targetWidth;
                         canvas.height = targetHeight;
                         const ctx = canvas.getContext('2d');
@@ -118,7 +119,7 @@ export const generateThumbnail = async (videoPath: string, outputPath: string): 
                         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                         console.log('Frame drawn to canvas');
 
-                        // Convert canvas to blob
+                        // Convert canvas to blob with higher quality
                         console.log('Converting canvas to blob...');
                         const thumbnailBlob = await new Promise<Blob>((canvasResolve) => {
                             canvas.toBlob((blob) => {
@@ -128,7 +129,7 @@ export const generateThumbnail = async (videoPath: string, outputPath: string): 
                                 } else {
                                     reject(new Error('Failed to create thumbnail blob'));
                                 }
-                            }, 'image/jpeg', 0.8);
+                            }, 'image/jpeg', 0.95); // Higher quality setting
                         });
 
                         // Create a blob URL for immediate display

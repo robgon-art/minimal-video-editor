@@ -4,6 +4,8 @@ export interface Clip {
     thumbnailUrl: string;
     duration: number; // in seconds
     selected?: boolean;
+    filePath?: string; // Path to the media file
+    loadedThumbnailUrl?: string; // Loaded thumbnail blob URL
 }
 
 // Pure functions for clip operations

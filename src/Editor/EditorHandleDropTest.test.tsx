@@ -92,7 +92,7 @@ describe('Editor Drag and Drop', () => {
         render(<EditorView {...createMockProps(mockOnDropClip)} />);
         
         // Find the source monitor
-        const sourceMonitor = screen.getAllByTestId('monitor')[0];
+        const sourceMonitor = screen.getByTestId('monitor-source');
         
         // Prepare the drag event data
         const clipJson = JSON.stringify(mockClip);

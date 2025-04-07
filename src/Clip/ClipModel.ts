@@ -7,6 +7,7 @@ export interface Clip {
     duration: number; // in seconds
     selected?: boolean;
     filePath?: string; // Path to the actual media file
+    loadedThumbnailUrl?: string; // Loaded thumbnail blob URL
 }
 
 /**

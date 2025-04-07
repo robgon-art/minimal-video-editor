@@ -5,14 +5,21 @@ import { useClipViewModel } from '../Clip/ClipViewModel';
 import { useClipsWithThumbnails } from './ClipListViewModel';
 
 // Separate component for each clip item
-const ClipListItem: React.FC<{ clip: any; onClipClick: (clip: any) => void }> = ({ clip, onClipClick }) => {
+const ClipListItem: React.FC<{ clip: any; onClipClick: (id: string) => void }> = ({ clip, onClipClick }) => {
     // Use the loaded thumbnail if available
     const clipWithRealThumbnail = {
         ...clip,
         thumbnailUrl: clip.loadedThumbnailUrl || clip.thumbnailUrl
     };
 
-    const clipProps = useClipViewModel(clipWithRealThumbnail, onClipClick);
+    // Pass the enhanced onClipClick handler that includes clip ID
+    const enhancedOnClipClick = (clipId: string) => {
+        console.log('Clip clicked with ID:', clipId);
+        // Make sure onClipClick is called with the ID
+        onClipClick(clipId);
+    };
+
+    const clipProps = useClipViewModel(clipWithRealThumbnail, enhancedOnClipClick);
 
     // Make clip draggable
     const handleDragStart = (e: React.DragEvent) => {

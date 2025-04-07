@@ -48,7 +48,7 @@ describe('MonitorView', () => {
     it('renders correctly', () => {
         render(<MonitorView {...defaultProps} />);
 
-        expect(screen.getByTestId('monitor')).toBeInTheDocument();
+        expect(screen.getByTestId('monitor-test monitor')).toBeInTheDocument();
         expect(screen.getByText('Test Monitor')).toBeInTheDocument();
     });
 
@@ -59,7 +59,7 @@ describe('MonitorView', () => {
         render(<MonitorView {...defaultProps} onDropClip={mockDropClip} />);
 
         // Get the monitor element
-        const monitorElement = screen.getByTestId('monitor');
+        const monitorElement = screen.getByTestId('monitor-test monitor');
 
         // Create a mock drop event
         const clipJson = JSON.stringify(mockClip);
