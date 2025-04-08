@@ -1,0 +1,49 @@
+Media Service Refactoring Plan
+
+Architecture Overview
+The plan is to develop a standalone REST service that replaces the browser IndexedDB
+storage with a server-side implementation that handles both media files and thumbnails.
+This architecture will allow for more scalable media management.
+
+Implementation Components
+1. REST Service Implementation
+Framework: Express.js with TypeScript for the REST API
+File structure:
+src/MediaServer/MediaServer.ts - Main server class and Express setup
+src/MediaServer/ThumbnailGenerator.ts - Server-side thumbnail generation
+src/MediaServer/MediaController.ts - Route handlers for media endpoints
+src/MediaServer/MediaRepository.ts - Storage interface for media assets
+src/MediaServer/MediaService.ts - Business logic for media operations
+
+2. API Endpoints
+POST /media - Upload media files
+GET /media - List available media files
+GET /media/:filename - Stream specific media file
+GET /thumbnails - List available thumbnails
+GET /thumbnails/:filename - Serve specific thumbnail
+
+3. Client Integration
+Create src/services/media/MediaServiceClient.ts to communicate with the REST service
+Implement the same interface as the current media services for minimal code changes
+
+Testing Strategy
+Unit tests for each component using Jest
+Integration tests for API endpoints using Supertest
+Mock file system for testing using in-memory storage
+Colocate tests with implementation files (e.g., MediaServer.test.ts)
+
+Phased Approach
+1. Implement REST service with file-based storage
+2. Create client adapter that matches current interface
+3. Migrate components to use the new service
+4. Remove old implementation
+
+Technical Details
+Use Node.js's built-in fs module for file storage
+Implement FFmpeg wrapper for server-side thumbnail generation
+Use streams for efficient file handling
+Implement proper error handling and logging
+Add authentication for production use
+
+This approach allows for incremental migration while maintaining testability and reusing
+existing code where appropriate.

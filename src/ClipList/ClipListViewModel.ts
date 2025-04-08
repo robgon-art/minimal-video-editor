@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Clip } from '../Clip/ClipModel';
-import { createThumbnailUrl } from '../services/media/MediaTransforms';
 
 // Props expected by the ClipList view
 export interface ClipListViewProps {
@@ -37,7 +36,7 @@ export interface ClipWithLoadedThumbnail extends Clip {
 }
 
 /**
- * Hook to load real thumbnails for clips asynchronously
+ * Hook to prepare clips with thumbnails
  */
 export const useClipsWithThumbnails = (clips: Clip[]): ClipWithLoadedThumbnail[] => {
     const [clipsWithThumbnails, setClipsWithThumbnails] = useState<ClipWithLoadedThumbnail[]>([]);
@@ -46,34 +45,11 @@ export const useClipsWithThumbnails = (clips: Clip[]): ClipWithLoadedThumbnail[]
         // Map original clips to our enhanced version
         const enhancedClips = clips.map(clip => ({
             ...clip,
-            loadedThumbnailUrl: clip.thumbnailUrl // Start with placeholder
+            // With REST service, we can just use the thumbnailUrl directly
+            loadedThumbnailUrl: clip.thumbnailUrl
         }));
 
         setClipsWithThumbnails(enhancedClips);
-
-        // For each clip that has a filePath, load its real thumbnail
-        clips.forEach(async (clip, index) => {
-            if (clip.filePath) {
-                try {
-                    // Get the real thumbnail URL
-                    const thumbnailUrl = await createThumbnailUrl(clip.filePath);
-
-                    // Update the specific clip with its real thumbnail
-                    setClipsWithThumbnails(prevClips => {
-                        const newClips = [...prevClips];
-                        if (newClips[index]) {
-                            newClips[index] = {
-                                ...newClips[index],
-                                loadedThumbnailUrl: thumbnailUrl
-                            };
-                        }
-                        return newClips;
-                    });
-                } catch (error) {
-                    console.error(`Error loading thumbnail for clip ${clip.id}:`, error);
-                }
-            }
-        });
     }, [clips]);
 
     return clipsWithThumbnails;

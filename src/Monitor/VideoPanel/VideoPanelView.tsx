@@ -1,7 +1,5 @@
 import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import { VideoPanelViewProps } from './VideoPanelViewModel';
-import { fileSystem } from '../../services/storage/FileSystem';
-import { OperationType } from '../../services/storage/StorageOperations';
 
 // Define the ref interface
 export interface VideoPanelRef {
@@ -146,64 +144,21 @@ const VideoPanelView = forwardRef<VideoPanelRef, VideoPanelViewProps>(({
 
         const loadVideo = async () => {
             try {
-                // Ensure the clip has a valid filePath
-                if (!clip.filePath && clip.title) {
-                    console.log('⚠️ No filePath provided, using title to construct path:', clip.title);
-                    clip.filePath = `/media/${clip.title}.mp4`;
+                // Always use the mediaUrl from the clip if available (from REST service)
+                if (clip.mediaUrl) {
+                    console.log('🌐 Using REST mediaUrl:', clip.mediaUrl);
+                    setVideoUrl(clip.mediaUrl);
+                    setIsLoading(false);
+                    return;
                 }
 
-                // Determine the correct path for the video
-                const videoPath = clip.filePath || `/media/${clip.title}.mp4`;
-                console.log('⚠️ Attempting to load video from path:', videoPath, 'Clip data:', clip);
-
-                try {
-                    // Try to read from IndexedDB storage
-                    console.log('🔍 Reading from IndexedDB storage...');
-                    const { data } = await fileSystem.executeOperation({
-                        type: OperationType.READ,
-                        path: videoPath
-                    });
-
-                    // Log successful data retrieval 
-                    console.log(`✅ Successfully retrieved video data from IndexedDB: ${data.byteLength} bytes`);
-
-                    if (data.byteLength === 0) {
-                        throw new Error('Retrieved empty file data');
-                    }
-
-                    // Determine the correct MIME type based on file extension
-                    const mimeType = getMimeType(videoPath);
-
-                    // Create a blob URL from the file data with proper MIME type
-                    const blob = new Blob([data], { type: mimeType });
-                    const url = URL.createObjectURL(blob);
-                    currentVideoUrl = url;
-                    console.log(`🎬 Created blob URL for video: ${url} size: ${blob.size} mimeType: ${mimeType}`);
-                    setVideoUrl(url);
-                } catch (storageError) {
-                    console.error('❌ Storage error:', storageError);
-
-                    if (retryCount < maxRetries) {
-                        console.log(`⚠️ Retry attempt ${retryCount + 1} of ${maxRetries}`);
-                        setRetryCount(prev => prev + 1);
-                        setTimeout(loadVideo, 500); // Retry after a short delay
-                        return;
-                    }
-
-                    // In test mode with preventFallback, don't use the fallback URL
-                    if (testEnv?.preventFallback) {
-                        console.log('⚠️ Preventing fallback for testing');
-                        throw new Error('[TEST_EXPECTED_ERROR] Failed to load video. Fallback prevented for testing.');
-                    }
-
-                    // Fallback to direct URL if storage fails
-                    console.log('⚠️ Falling back to direct URL:', videoPath);
-                    setVideoUrl(videoPath);
-                }
+                // Fallback to direct URL if no mediaUrl is available
+                console.log('⚠️ Falling back to direct path:', clip.filePath);
+                setVideoUrl(clip.filePath);
+                setIsLoading(false);
             } catch (e) {
                 console.error('❌ Error loading video:', e);
                 setError('Failed to load video');
-            } finally {
                 setIsLoading(false);
             }
         };

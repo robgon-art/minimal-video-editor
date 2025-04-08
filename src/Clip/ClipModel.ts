@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { mediaService } from '../services/media/MediaServiceInstance';
 
 export interface Clip {
     id: string;
@@ -9,6 +10,7 @@ export interface Clip {
     selected?: boolean;
     filePath?: string; // Path to the actual media file
     loadedThumbnailUrl?: string; // Loaded thumbnail blob URL
+    mediaUrl?: string; // URL to the media file (used by REST service)
 }
 
 /**
@@ -25,14 +27,26 @@ export const createClipFromFile = (
     durationInSeconds: number,
     fps: number = 24
 ): Clip => {
-    // Use a local placeholder image instead of an external service
+    // Default values in case of errors
+    let thumbnailUrl = '/video_clip.png';
+    let mediaUrl = filePath;
+
+    try {
+        // Always try to get URLs from the media service
+        thumbnailUrl = mediaService.getThumbnailUrl(filePath);
+        mediaUrl = mediaService.getMediaUrl(filePath);
+    } catch (e) {
+        console.log('Using default thumbnail and media paths (service may not be available)');
+    }
+
     return {
         id: uuidv4(),
         title: fileName.replace(/\.[^/.]+$/, ""), // Remove file extension
-        thumbnailUrl: '/video_clip.png',
+        thumbnailUrl: thumbnailUrl,
         duration: durationInSeconds,
         fps: fps,
-        filePath: filePath
+        filePath: filePath,
+        mediaUrl: mediaUrl
     };
 };
 

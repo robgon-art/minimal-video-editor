@@ -6,23 +6,15 @@ import { TransportControlViewProps } from './TransportControl/TransportControlVi
 import { MonitorViewProps } from './MonitorViewModel';
 import MonitorView from './MonitorView';
 
-// Sample clip data for testing
+// Sample clip data for testing with REST service URLs
 const mockClip = {
     id: 'test-clip-1',
     title: 'Test Clip',
     filePath: '/media/test-clip.mp4',
     thumbnailUrl: '/media/test-thumbnail.jpg',
-    duration: 60
+    duration: 60,
+    mediaUrl: 'http://localhost:3001/media/test-clip.mp4'
 };
-
-// Mock FileSystem to avoid loading errors
-jest.mock('../services/storage/FileSystem', () => ({
-    fileSystem: {
-        executeOperation: jest.fn().mockResolvedValue({
-            data: new ArrayBuffer(1024) // Mock video data
-        })
-    }
-}));
 
 describe('Video Controls Integration', () => {
     // Create a custom mock for the VideoPanelRef
@@ -180,8 +172,8 @@ describe('Video Controls Integration', () => {
                 currentTime: 0,
                 timecode: '00:00:00:00',
                 testEnv: {
-                    preventFallback: true,
                     maxRetries: 0
+                    // No need for preventFallback with REST service
                 }
             },
             timeRulerProps: {

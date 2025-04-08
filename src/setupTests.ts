@@ -273,3 +273,18 @@ if (typeof global.URL.createObjectURL === 'undefined') {
   global.URL.createObjectURL = jest.fn(() => 'mock://test-url');
   global.URL.revokeObjectURL = jest.fn();
 }
+
+// Mock media service instance
+jest.mock('./services/media/MediaServiceInstance', () => {
+  // Create a mock implementation of the media service interface
+  const mockMediaService = {
+    scanMediaFolder: jest.fn().mockResolvedValue([]),
+    importMediaFiles: jest.fn().mockResolvedValue([]),
+    getThumbnailUrl: jest.fn().mockReturnValue('/video_clip.png'),
+    getMediaUrl: jest.fn().mockReturnValue('/media/video.mp4')
+  };
+
+  return {
+    mediaService: mockMediaService
+  };
+});

@@ -45,17 +45,15 @@ const ClipListItem: React.FC<{
 
     // Make clip draggable
     const handleDragStart = (e: React.DragEvent) => {
-        // Fix thumbnail paths and ensure filePath is correctly set
-        const videoPath = clip.filePath || `/media/${clip.title}.mp4`;
-        const thumbnailPath = clip.thumbnailUrl.includes('/video_clip.png')
-            ? `/media/thumbnails/${clip.title}.jpg`
-            : clip.thumbnailUrl;
+        // Use mediaUrl if available from the clip, otherwise fallback to filePath
+        const videoPath = clip.mediaUrl || clip.filePath || `/media/${clip.title}.mp4`;
+        const thumbnailUrl = clip.loadedThumbnailUrl || clip.thumbnailUrl;
 
         // Make sure filePath is included in the clip data for video playback
         const clipWithFilePath = {
             ...clip,
             filePath: videoPath,
-            thumbnailUrl: thumbnailPath,
+            thumbnailUrl: thumbnailUrl,
             _dragSource: 'clipList' // Add source info for debugging
         };
 

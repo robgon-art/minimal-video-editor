@@ -1,135 +1,164 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useClipViewerViewModel, createClipViewerProps } from './ClipViewerViewModel';
-import { scanMediaFolder, importMediaFiles } from '../services/media/MediaScanner';
+import { mediaService } from '../services/media/MediaServiceInstance';
 import { Clip } from '../Clip/ClipModel';
 
-// Mock dependencies to avoid real file system operations
-jest.mock('../services/media/MediaScanner', () => ({
-    scanMediaFolder: jest.fn(),
-    importMediaFiles: jest.fn()
+// Mock the mediaService methods
+jest.mock('../services/media/MediaServiceInstance', () => ({
+    mediaService: {
+        scanMediaFolder: jest.fn(),
+        importMediaFiles: jest.fn()
+    }
 }));
 
 describe('ClipViewerViewModel', () => {
     // Store the original document.createElement method
     const originalCreateElement = document.createElement.bind(document);
-    
+
     // Store original console.error
     const originalConsoleError = console.error;
-    
+
     beforeEach(() => {
-        // Reset mock implementation before each test
+        // Reset all mocks
         jest.clearAllMocks();
-        
+
         // Restore the original createElement to its default behavior
         document.createElement = originalCreateElement;
-        
+
         // Mock console.error to suppress expected error messages
         console.error = jest.fn();
     });
-    
+
     afterAll(() => {
         // Restore original console.error
         console.error = originalConsoleError;
     });
 
     describe('createClipViewerProps', () => {
-        it('should create view props correctly', () => {
+        it('should create view props with the right structure', () => {
             // Arrange
-            const mockClips: Clip[] = [
-                { id: '1', title: 'Clip 1', thumbnailUrl: '/clip1.jpg', duration: 30 },
-                { id: '2', title: 'Clip 2', thumbnailUrl: '/clip2.jpg', duration: 60 }
+            const sampleClips = [
+                {
+                    id: '1',
+                    title: 'Test Clip 1',
+                    thumbnailUrl: '/thumbnails/test1.jpg',
+                    mediaUrl: '/media/test1.mp4',
+                    duration: 10
+                },
+                {
+                    id: '2',
+                    title: 'Test Clip 2',
+                    thumbnailUrl: '/thumbnails/test2.jpg',
+                    mediaUrl: '/media/test2.mp4',
+                    duration: 20
+                }
             ];
-            const mockOnClipClick = jest.fn();
-            const mockOnAddClips = jest.fn();
+            const onClipClick = jest.fn();
+            const onAddClips = jest.fn();
 
             // Act
-            const result = createClipViewerProps(
-                mockClips,
+            const props = createClipViewerProps(
+                sampleClips,
                 false,
                 null,
-                mockOnClipClick,
-                mockOnAddClips
+                onClipClick,
+                onAddClips
             );
 
             // Assert
-            expect(result).toEqual({
-                clips: mockClips,
+            expect(props).toEqual({
+                clips: sampleClips,
                 isLoading: false,
                 errorMessage: null,
-                onClipClick: mockOnClipClick,
-                onAddClips: mockOnAddClips
+                onClipClick,
+                onAddClips
             });
         });
     });
 
     describe('useClipViewerViewModel', () => {
-        beforeEach(() => {
-            // Setup default mock implementation for scanMediaFolder
-            (scanMediaFolder as jest.Mock).mockResolvedValue([
-                { id: '1', title: 'Test Clip', thumbnailUrl: '/test.jpg', duration: 30 }
-            ]);
-        });
-
         it('should load clips on mount', async () => {
-            // Arrange
-            const mockClips = [
-                { id: '1', title: 'Test Clip', thumbnailUrl: '/test.jpg', duration: 30 }
+            // Setup mockReturnValue before rendering the hook
+            const sampleClips = [
+                {
+                    id: '1',
+                    title: 'Test Clip 1',
+                    thumbnailUrl: '/thumbnails/test1.jpg',
+                    mediaUrl: '/media/test1.mp4',
+                    duration: 10
+                },
+                {
+                    id: '2',
+                    title: 'Test Clip 2',
+                    thumbnailUrl: '/thumbnails/test2.jpg',
+                    mediaUrl: '/media/test2.mp4',
+                    duration: 20
+                }
             ];
-            (scanMediaFolder as jest.Mock).mockResolvedValue(mockClips);
+            (mediaService.scanMediaFolder as jest.Mock).mockResolvedValue(sampleClips);
 
-            // Act
             const { result } = renderHook(() => useClipViewerViewModel());
 
-            // Initial state should be loading
+            // Initially should be loading
             expect(result.current.isLoading).toBe(true);
 
-            // Wait for the useEffect to complete
+            // Wait for data loading
             await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-            // Assert
-            expect(scanMediaFolder).toHaveBeenCalledTimes(1);
-            expect(result.current.clips).toEqual(mockClips);
+            // Check results
+            expect(result.current.clips).toEqual(sampleClips);
             expect(result.current.errorMessage).toBeNull();
+
+            // Verify the service was called
+            expect(mediaService.scanMediaFolder).toHaveBeenCalledTimes(1);
         });
 
         it('should handle errors when loading clips', async () => {
-            // Arrange
-            (scanMediaFolder as jest.Mock).mockRejectedValue(new Error('Failed to load'));
+            // Mock a failed API call
+            (mediaService.scanMediaFolder as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-            // Act
             const { result } = renderHook(() => useClipViewerViewModel());
 
-            // Wait for the useEffect to complete
+            // Wait for error handling
             await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-            // Assert
-            expect(scanMediaFolder).toHaveBeenCalledTimes(1);
-            expect(result.current.clips).toEqual([]);
+            // Check error state
             expect(result.current.errorMessage).toBe('Failed to load clips from media folder');
         });
 
-        it('should select clip when onClipClick is called', async () => {
-            // Arrange
-            const mockClips = [
-                { id: '1', title: 'Clip 1', thumbnailUrl: '/clip1.jpg', duration: 30 },
-                { id: '2', title: 'Clip 2', thumbnailUrl: '/clip2.jpg', duration: 60 }
+        it('should handle clip selection', async () => {
+            // Setup the initial state with loaded clips
+            const sampleClips = [
+                {
+                    id: '1',
+                    title: 'Test Clip 1',
+                    thumbnailUrl: '/thumbnails/test1.jpg',
+                    mediaUrl: '/media/test1.mp4',
+                    duration: 10
+                },
+                {
+                    id: '2',
+                    title: 'Test Clip 2',
+                    thumbnailUrl: '/thumbnails/test2.jpg',
+                    mediaUrl: '/media/test2.mp4',
+                    duration: 20
+                }
             ];
-            (scanMediaFolder as jest.Mock).mockResolvedValue(mockClips);
+            (mediaService.scanMediaFolder as jest.Mock).mockResolvedValue(sampleClips);
 
-            // Act
             const { result } = renderHook(() => useClipViewerViewModel());
 
-            // Wait for the useEffect to complete
+            // Wait for data loading
             await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-            // Call the clip click handler
+            // Select a clip
             act(() => {
-                result.current.onClipClick('2');
+                result.current.onClipClick('1');
             });
 
-            // Assert the clips were updated
-            expect(result.current.clips[1].selected).toBe(true);
-            expect(result.current.clips[0].selected).toBe(false);
+            // Verify selection
+            expect(result.current.clips.find(c => c.id === '1')?.selected).toBe(true);
+            expect(result.current.clips.find(c => c.id === '2')?.selected).toBe(false);
         });
 
         it('should handle adding clips through file dialog', async () => {
@@ -138,21 +167,29 @@ describe('ClipViewerViewModel', () => {
             mockFileInput.type = 'file';
             mockFileInput.multiple = true;
             mockFileInput.accept = 'video/*';
-            
+
             // Mock click method and store original
             const originalClick = mockFileInput.click;
             mockFileInput.click = jest.fn();
-            
+
             // Create a mock file
             const mockFiles = [
                 new File(['test'], 'test.mp4', { type: 'video/mp4' })
             ];
-            
+
+            // Setup initial clips for scanMediaFolder
+            const initialClips = [
+                { id: '1', title: 'Existing Clip', thumbnailUrl: '/test.jpg', duration: 30 }
+            ];
+
+            // Mock scanMediaFolder to return initial clips
+            (mediaService.scanMediaFolder as jest.Mock).mockResolvedValue(initialClips);
+
             // Setup importMediaFiles mock
             const newClips = [
                 { id: '3', title: 'test', thumbnailUrl: '/test.jpg', duration: 45 }
             ];
-            (importMediaFiles as jest.Mock).mockResolvedValue(newClips);
+            (mediaService.importMediaFiles as jest.Mock).mockResolvedValue(newClips);
 
             // Mock document.createElement only for input element
             jest.spyOn(document, 'createElement').mockImplementation((tagName) => {
@@ -165,11 +202,15 @@ describe('ClipViewerViewModel', () => {
             // Act
             const { result } = renderHook(() => useClipViewerViewModel());
 
-            // Wait for initial load
-            await waitFor(() => expect(result.current.isLoading).toBe(false));
+            // Wait for initial load and ensure clips are loaded
+            await waitFor(() => {
+                expect(result.current.isLoading).toBe(false);
+                expect(result.current.clips).toEqual(initialClips);
+            });
 
-            // Initial clips
+            // Store initial clips count
             const initialClipsCount = result.current.clips.length;
+            expect(initialClipsCount).toBe(1); // Verify we have the expected initial state
 
             // Trigger add clips function
             act(() => {
@@ -182,31 +223,28 @@ describe('ClipViewerViewModel', () => {
 
             // Simulate file selection by triggering the onchange event
             await act(async () => {
-                // Get the onchange handler that was set by the component
-                // and manually trigger it with our mock files
                 const event = {
-                    target: { 
+                    target: {
                         files: mockFiles
                     }
                 } as unknown as Event;
-                
-                // Find the onchange handler set by the component
-                mockFileInput.dispatchEvent(new Event('change'));
-                
+
                 // Directly call the implementation's onchange handler
                 if (mockFileInput.onchange) {
                     await mockFileInput.onchange(event);
                 }
             });
 
-            // Wait for importMediaFiles to be called
-            await waitFor(() => expect(importMediaFiles).toHaveBeenCalled());
+            // Wait for importMediaFiles to be called and clips to be updated
+            await waitFor(() => {
+                expect(mediaService.importMediaFiles).toHaveBeenCalled();
+                expect(result.current.clips.length).toBe(initialClipsCount + newClips.length);
+            });
 
             // Assert
-            expect(importMediaFiles).toHaveBeenCalledWith(mockFiles);
-            expect(result.current.clips.length).toBe(initialClipsCount + newClips.length);
+            expect(mediaService.importMediaFiles).toHaveBeenCalledWith(mockFiles);
             expect(result.current.clips).toContainEqual(newClips[0]);
-            
+
             // Restore original
             mockFileInput.click = originalClick;
             jest.restoreAllMocks();
@@ -218,8 +256,16 @@ describe('ClipViewerViewModel', () => {
             mockFileInput.type = 'file';
             mockFileInput.click = jest.fn();
 
+            // Setup initial clips
+            const initialClips = [
+                { id: '1', title: 'Existing Clip', thumbnailUrl: '/test.jpg', duration: 30 }
+            ];
+            
+            // Mock scanMediaFolder to return initial clips
+            (mediaService.scanMediaFolder as jest.Mock).mockResolvedValue(initialClips);
+
             // Setup importMediaFiles to fail
-            (importMediaFiles as jest.Mock).mockRejectedValue(new Error('Failed to import files'));
+            (mediaService.importMediaFiles as jest.Mock).mockRejectedValue(new Error('Failed to import files'));
 
             // Mock document.createElement only for input
             jest.spyOn(document, 'createElement').mockImplementation((tagName) => {
@@ -233,7 +279,10 @@ describe('ClipViewerViewModel', () => {
             const { result } = renderHook(() => useClipViewerViewModel());
 
             // Wait for initial load
-            await waitFor(() => expect(result.current.isLoading).toBe(false));
+            await waitFor(() => {
+                expect(result.current.isLoading).toBe(false);
+                expect(result.current.clips).toEqual(initialClips);
+            });
 
             // Trigger add clips function
             act(() => {
@@ -244,15 +293,15 @@ describe('ClipViewerViewModel', () => {
             await act(async () => {
                 // Create a mock file
                 const mockFile = new File([''], 'test.mp4', { type: 'video/mp4' });
-                
+
                 // Get the onchange handler that was set by the component
                 // and manually trigger it with our mock file
                 const event = {
-                    target: { 
+                    target: {
                         files: [mockFile]
                     }
                 } as unknown as Event;
-                
+
                 if (mockFileInput.onchange) {
                     await mockFileInput.onchange(event);
                 }
@@ -264,14 +313,25 @@ describe('ClipViewerViewModel', () => {
             // Assert
             expect(result.current.errorMessage).toBe('Failed to add clips');
             
+            // Verify clips haven't changed
+            expect(result.current.clips).toEqual(initialClips);
+
             jest.restoreAllMocks();
         });
 
         it('should handle empty file selection', async () => {
             // Create a real input element
             const mockFileInput = document.createElement('input');
-            mockFileInput.type = 'file'; 
+            mockFileInput.type = 'file';
             mockFileInput.click = jest.fn();
+
+            // Setup initial clips
+            const initialClips = [
+                { id: '1', title: 'Existing Clip', thumbnailUrl: '/test.jpg', duration: 30 }
+            ];
+            
+            // Mock scanMediaFolder to return initial clips
+            (mediaService.scanMediaFolder as jest.Mock).mockResolvedValue(initialClips);
 
             // Mock document.createElement only for input
             jest.spyOn(document, 'createElement').mockImplementation((tagName) => {
@@ -284,11 +344,11 @@ describe('ClipViewerViewModel', () => {
             // Act
             const { result } = renderHook(() => useClipViewerViewModel());
 
-            // Wait for initial load
-            await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-            // Get initial state
-            const initialClips = [...result.current.clips];
+            // Wait for initial load and ensure clips are loaded
+            await waitFor(() => {
+                expect(result.current.isLoading).toBe(false);
+                expect(result.current.clips).toEqual(initialClips);
+            });
 
             // Trigger add clips function
             act(() => {
@@ -300,11 +360,11 @@ describe('ClipViewerViewModel', () => {
                 // Get the onchange handler that was set by the component
                 // and manually trigger it with empty files
                 const event = {
-                    target: { 
+                    target: {
                         files: []
                     }
                 } as unknown as Event;
-                
+
                 if (mockFileInput.onchange) {
                     await mockFileInput.onchange(event);
                 }
@@ -312,11 +372,19 @@ describe('ClipViewerViewModel', () => {
 
             // Assert clips didn't change
             expect(result.current.clips).toEqual(initialClips);
-            
+
             jest.restoreAllMocks();
         });
 
         it('should handle file dialog error', async () => {
+            // Setup initial clips
+            const initialClips = [
+                { id: '1', title: 'Existing Clip', thumbnailUrl: '/test.jpg', duration: 30 }
+            ];
+            
+            // Mock scanMediaFolder to return initial clips
+            (mediaService.scanMediaFolder as jest.Mock).mockResolvedValue(initialClips);
+            
             // Mock document.createElement to throw an error
             jest.spyOn(document, 'createElement').mockImplementation((tagName) => {
                 if (tagName === 'input') {
@@ -329,7 +397,10 @@ describe('ClipViewerViewModel', () => {
             const { result } = renderHook(() => useClipViewerViewModel());
 
             // Wait for initial load
-            await waitFor(() => expect(result.current.isLoading).toBe(false));
+            await waitFor(() => {
+                expect(result.current.isLoading).toBe(false);
+                expect(result.current.clips).toEqual(initialClips);
+            });
 
             // Trigger add clips function
             act(() => {
@@ -339,6 +410,9 @@ describe('ClipViewerViewModel', () => {
             // Assert
             expect(result.current.errorMessage).toBe('Failed to open file dialog');
             
+            // Verify clips haven't changed
+            expect(result.current.clips).toEqual(initialClips);
+
             jest.restoreAllMocks();
         });
     });

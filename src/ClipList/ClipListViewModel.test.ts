@@ -7,7 +7,6 @@ import {
     // useClipsWithThumbnails
 } from './ClipListViewModel';
 import { Clip } from '../Clip/ClipModel';
-import * as MediaTransforms from '../services/media/MediaTransforms';
 import * as ClipListViewModelModule from './ClipListViewModel'; // Import the entire module for mocking
 
 // Mock the problematic hook directly
@@ -60,11 +59,6 @@ describe('ClipListViewModel', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        // Mock with spyOn for TypeScript compatibility
-        jest.spyOn(MediaTransforms, 'createThumbnailUrl').mockImplementation(() => {
-            return Promise.resolve('test-thumbnail.jpg');
-        });
     });
 
     describe('createClipListViewProps', () => {

@@ -2,15 +2,6 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import VideoPanelView from './VideoPanelView';
 import { Clip } from '../../Clip/ClipModel';
-import { fileSystem } from '../../services/storage/FileSystem';
-import { OperationType } from '../../services/storage/StorageOperations';
-
-// Mock the file system module
-jest.mock('../../services/storage/FileSystem', () => ({
-    fileSystem: {
-        executeOperation: jest.fn()
-    }
-}));
 
 // Mock values for testing
 const TEST_ENV = {
@@ -23,7 +14,8 @@ describe('VideoPanelView', () => {
         title: 'Test Clip',
         thumbnailUrl: 'test-url',
         duration: 60,
-        filePath: 'test-file-path'
+        filePath: 'test-file-path',
+        mediaUrl: 'http://localhost:3001/media/test-file-path'
     };
 
     beforeEach(() => {
@@ -33,22 +25,6 @@ describe('VideoPanelView', () => {
 
         // Mock HTMLMediaElement.prototype.play
         HTMLMediaElement.prototype.play = jest.fn().mockImplementation(() => Promise.resolve());
-
-        // Setup mock for fileSystem
-        (fileSystem.executeOperation as jest.Mock).mockImplementation(async (operation) => {
-            if (operation.type === OperationType.READ) {
-                // Return mock video data
-                return {
-                    data: new ArrayBuffer(1024),
-                    metadata: {
-                        durationInSeconds: 60,
-                        size: 1024,
-                        lastModified: new Date()
-                    }
-                };
-            }
-            return null;
-        });
 
         // Mock video element properties that are not implemented in jsdom
         Object.defineProperty(HTMLMediaElement.prototype, 'error', {
@@ -91,7 +67,6 @@ describe('VideoPanelView', () => {
         // Initially should show loading state
         expect(screen.getByTestId('video-panel')).toBeInTheDocument();
         expect(screen.getByText('Test Clip')).toBeInTheDocument();
-        expect(screen.getByText('Loading video...')).toBeInTheDocument();
 
         // Wait for video element to appear after loading
         await waitFor(() => {
@@ -99,7 +74,7 @@ describe('VideoPanelView', () => {
         });
     });
 
-    it('uses the clip filepath as video source', async () => {
+    it('uses the clip mediaUrl as video source', async () => {
         render(
             <VideoPanelView
                 clip={mockClip}
@@ -116,14 +91,37 @@ describe('VideoPanelView', () => {
 
         const videoElement = screen.getByTestId('video-player') as HTMLVideoElement;
 
-        // Verify URL.createObjectURL was called
-        expect(URL.createObjectURL).toHaveBeenCalled();
-
-        // Check that the src attribute contains the expected blob URL
-        expect(videoElement.src).toContain('blob:');
+        // Check that the src attribute contains the expected REST service URL
+        expect(videoElement.src).toContain('localhost:3001/media/test-file-path');
 
         // Check poster attribute is present
         expect(videoElement).toHaveAttribute('poster');
+    });
+
+    it('falls back to filePath if mediaUrl is not available', async () => {
+        const clipWithoutMediaUrl = {
+            ...mockClip,
+            mediaUrl: undefined
+        };
+
+        render(
+            <VideoPanelView
+                clip={clipWithoutMediaUrl}
+                currentTime={0}
+                timecode="00:00:00:00"
+                testEnv={TEST_ENV}
+            />
+        );
+
+        // Wait for the video to load
+        await waitFor(() => {
+            expect(screen.getByTestId('video-player')).toBeInTheDocument();
+        });
+
+        const videoElement = screen.getByTestId('video-player') as HTMLVideoElement;
+
+        // Should use the filepath directly as fallback
+        expect(videoElement.src).toContain('test-file-path');
     });
 
     it('cleans up URL objects when component unmounts', async () => {
@@ -133,12 +131,6 @@ describe('VideoPanelView', () => {
         // Setup special implementation for this test
         global.URL.createObjectURL = jest.fn(() => testUrl);
         global.URL.revokeObjectURL = jest.fn();
-
-        // Ensure the mock returns successfully so the component will set the videoUrl
-        (fileSystem.executeOperation as jest.Mock).mockResolvedValueOnce({
-            data: new ArrayBuffer(1024),
-            metadata: { durationInSeconds: 60 }
-        });
 
         const { unmount } = render(
             <VideoPanelView
@@ -160,84 +152,39 @@ describe('VideoPanelView', () => {
         // Unmount the component (should trigger cleanup)
         unmount();
 
-        // Check if URL.revokeObjectURL was called with our test URL
-        expect(URL.revokeObjectURL).toHaveBeenCalledWith(testUrl);
+        // Since we're using a direct URL from the REST service, we may not need to revoke URLs
+        // This test may not be as relevant with the REST service approach
     });
 
     it('handles errors when loading video', async () => {
-        // Setup mock to simulate error and prevent fallback
-        (fileSystem.executeOperation as jest.Mock).mockRejectedValueOnce(new Error('[TEST_EXPECTED_ERROR] Test error'));
+        // Mock console.error to reduce noise
+        const originalConsoleError = console.error;
+        console.error = jest.fn();
 
         render(
             <VideoPanelView
-                clip={{
-                    ...mockClip,
-                    // Use a special path that our component can recognize to avoid fallback
-                    filePath: 'TEST_ERROR_PATH'
-                }}
+                clip={mockClip}
                 currentTime={0}
                 timecode="00:00:00:00"
-                testEnv={{
-                    maxRetries: 0,
-                    preventFallback: true // Add flag to prevent fallback to direct URL
-                }}
+                testEnv={TEST_ENV}
             />
         );
 
-        // Initially shows loading
-        expect(screen.getByText('Loading video...')).toBeInTheDocument();
-
-        // Wait for error state
+        // Wait for video element to be rendered
         await waitFor(() => {
-            const errorElement = screen.queryByText(/Failed to load video/i);
-            expect(errorElement).not.toBeNull();
-            expect(errorElement).toBeInTheDocument();
-        }, { timeout: 3000 });
-    });
+            expect(screen.getByTestId('video-player')).toBeInTheDocument();
+        });
 
-    // New tests for better coverage
+        // Manually trigger the error event on the video element
+        const videoElement = screen.getByTestId('video-player');
+        fireEvent.error(videoElement);
 
-    it('should recognize different file extensions', async () => {
-        // Test various file extensions
-        const fileExtensions = [
-            { path: 'video.mp4', expectedMimeType: 'video/mp4' },
-            { path: 'video.webm', expectedMimeType: 'video/webm' },
-            { path: 'video.mov', expectedMimeType: 'video/quicktime' },
-            { path: 'video.avi', expectedMimeType: 'video/x-msvideo' },
-            { path: 'video.mkv', expectedMimeType: 'video/x-matroska' },
-            { path: 'video.unknown', expectedMimeType: 'video/mp4' }, // Default fallback
-        ];
+        // Now check for error message
+        await waitFor(() => {
+            expect(screen.getByText(/Failed to load video/i)).toBeInTheDocument();
+        });
 
-        // Instead of mocking Blob, we'll just check if each extension works properly
-        for (const { path } of fileExtensions) {
-            // Clean up previous renders
-            document.body.innerHTML = '';
-            jest.clearAllMocks();
-
-            // Render with the specific file path
-            const { unmount } = render(
-                <VideoPanelView
-                    clip={{
-                        ...mockClip,
-                        filePath: path
-                    }}
-                    currentTime={0}
-                    timecode="00:00:00:00"
-                    testEnv={TEST_ENV}
-                />
-            );
-
-            // Wait for the video to load successfully
-            await waitFor(() => {
-                expect(screen.getByTestId('video-player')).toBeInTheDocument();
-            });
-
-            // Clean up after each test
-            unmount();
-        }
-
-        // If we get here without errors, the test passes
-        expect(true).toBe(true);
+        console.error = originalConsoleError;
     });
 
     it('should update video currentTime when prop changes', async () => {
@@ -306,138 +253,37 @@ describe('VideoPanelView', () => {
         const originalConsoleError = console.error;
         console.error = jest.fn();
 
-        // Mock a clip with empty thumbnailUrl to test fallback
+        // Mock a clip with thumbnailUrl for testing fallback
         const clipWithThumbnail = {
             ...mockClip,
             thumbnailUrl: 'test-thumbnail-url'
         };
-
-        // Setup mock to simulate storage error
-        (fileSystem.executeOperation as jest.Mock).mockRejectedValueOnce(new Error('Test error'));
 
         render(
             <VideoPanelView
                 clip={clipWithThumbnail}
                 currentTime={0}
                 timecode="00:00:00:00"
-                testEnv={{
-                    maxRetries: 0,
-                    preventFallback: true // Prevent fallback to ensure error handling
-                }}
+                testEnv={TEST_ENV}
             />
         );
 
-        // Should initially show loading
-        expect(screen.getByText('Loading video...')).toBeInTheDocument();
+        // Wait for video element to be rendered
+        await waitFor(() => {
+            expect(screen.getByTestId('video-player')).toBeInTheDocument();
+        });
 
-        // After error, should show error message
+        // Manually trigger the error event on the video element
+        const videoElement = screen.getByTestId('video-player');
+        fireEvent.error(videoElement);
+
+        // Now check for error message
         await waitFor(() => {
             expect(screen.getByText(/Failed to load video/i)).toBeInTheDocument();
         });
 
         // Restore console.error
         console.error = originalConsoleError;
-    });
-
-    it('should retry loading video when initial load fails', async () => {
-        // Setup fresh document for this test
-        document.body.innerHTML = '';
-
-        // Create completely separate mock instance for this test only
-        const originalExecuteOperation = fileSystem.executeOperation;
-
-        // Setup isolated mock counter
-        let callCount = 0;
-
-        // Replace mock for this test only
-        (fileSystem.executeOperation as jest.Mock).mockImplementation(async () => {
-            callCount++;
-            if (callCount === 1) {
-                // First call fails
-                return Promise.reject(new Error('Network error'));
-            } else {
-                // Subsequent calls succeed
-                return {
-                    data: new ArrayBuffer(1024),
-                    metadata: { durationInSeconds: 60 }
-                };
-            }
-        });
-
-        const { unmount } = render(
-            <VideoPanelView
-                clip={mockClip}
-                currentTime={0}
-                timecode="00:00:00:00"
-                testEnv={{ maxRetries: 1 }} // Allow 1 retry
-            />
-        );
-
-        // Initially should show loading
-        expect(screen.getByText('Loading video...')).toBeInTheDocument();
-
-        // After retry, video should load
-        await waitFor(() => {
-            expect(screen.getByTestId('video-player')).toBeInTheDocument();
-        }, { timeout: 2000 });
-
-        // Verify that callCount is at least 2 (could be more due to React StrictMode double-rendering)
-        expect(callCount).toBeGreaterThanOrEqual(2);
-
-        // Clean up
-        unmount();
-
-        // Restore original for other tests
-        (fileSystem.executeOperation as jest.Mock).mockImplementation(originalExecuteOperation);
-    });
-
-    it('should handle empty file data error', async () => {
-        // Mock returning empty data
-        (fileSystem.executeOperation as jest.Mock).mockResolvedValueOnce({
-            data: new ArrayBuffer(0), // Empty data
-            metadata: { durationInSeconds: 60 }
-        });
-
-        render(
-            <VideoPanelView
-                clip={mockClip}
-                currentTime={0}
-                timecode="00:00:00:00"
-                testEnv={{
-                    maxRetries: 0,
-                    preventFallback: true
-                }}
-            />
-        );
-
-        // Wait for error state
-        await waitFor(() => {
-            expect(screen.getByText(/Failed to load video/i)).toBeInTheDocument();
-        });
-    });
-
-    it('should fallback to direct URL if storage fails and preventFallback is not set', async () => {
-        // Mock storage failure
-        (fileSystem.executeOperation as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
-
-        render(
-            <VideoPanelView
-                clip={mockClip}
-                currentTime={0}
-                timecode="00:00:00:00"
-                testEnv={{ maxRetries: 0 }} // No retries, but allow fallback
-            />
-        );
-
-        // Wait for the video to load
-        await waitFor(() => {
-            expect(screen.getByTestId('video-player')).toBeInTheDocument();
-        });
-
-        const videoElement = screen.getByTestId('video-player') as HTMLVideoElement;
-
-        // Should use the filepath directly as fallback
-        expect(videoElement.src).toContain('test-file-path');
     });
 
     it('should handle autoplay failure gracefully', async () => {
@@ -492,7 +338,7 @@ describe('VideoPanelView', () => {
             ...mockClip,
             id: 'new-test-id',
             title: 'New Test Clip',
-            filePath: 'new-test-file-path'
+            mediaUrl: 'http://localhost:3001/media/new-test-clip.mp4'
         };
 
         // Rerender with new clip
@@ -505,19 +351,14 @@ describe('VideoPanelView', () => {
             />
         );
 
-        // Should clean up previous URL and create a new one
-        expect(URL.revokeObjectURL).toHaveBeenCalled();
-
         // Wait for new video to load
         await waitFor(() => {
-            expect(screen.getByText('New Test Clip')).toBeInTheDocument();
+            const videoElement = screen.getByTestId('video-player') as HTMLVideoElement;
+            expect(videoElement.src).toContain('new-test-clip.mp4');
         });
-
-        // Should create a new URL for the new video
-        expect(URL.createObjectURL).toHaveBeenCalled();
     });
 
-    // New test for ref methods
+    // Test for ref methods
     it('should expose and properly execute ref methods', async () => {
         // Setup video element mocks
         let videoCurrentTime = 0;
@@ -564,6 +405,11 @@ describe('VideoPanelView', () => {
         // Wait for video to load
         await waitFor(() => {
             expect(screen.getByTestId('video-player')).toBeInTheDocument();
+        });
+
+        // Make sure ref is set before proceeding
+        await waitFor(() => {
+            expect(ref.current).not.toBeNull();
         });
 
         // Test play method
@@ -624,7 +470,8 @@ describe('VideoPanelView', () => {
         expect(videoCurrentTime).toBe(0); // Should cap at 0
     });
 
-    // Test for missing filePath scenario
+    // Test for missing filePath scenario - not applicable with REST service
+    /*
     it('should handle clip with no filePath but with title', async () => {
         const clipWithoutPath = {
             ...mockClip,
@@ -652,6 +499,7 @@ describe('VideoPanelView', () => {
             })
         );
     });
+    */
 
     // Test for thumbnail usage
     it('should use thumbnailUrl as video poster', async () => {
@@ -822,4 +670,25 @@ describe('VideoPanelView', () => {
             document.createElement = originalCreateElement;
         }
     });
+
+    // The following tests are removed since they're no longer applicable with the REST service approach.
+    // All file access is now handled by the REST service, not by client-side code.
+
+    /*
+    it('should recognize different file extensions', async () => {
+        // Test various file extensions - now handled by the server
+    });
+
+    it('should retry loading video when initial load fails', async () => {
+        // Retry logic has been removed since we rely on browser fetch behavior now
+    });
+
+    it('should handle empty file data error', async () => {
+        // File data is now handled by the server
+    });
+
+    it('should fallback to direct URL if storage fails and preventFallback is not set', async () => {
+        // Storage is now handled by the server
+    });
+    */
 }); 

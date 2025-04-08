@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Clip, selectClipById, addClips } from '../Clip/ClipModel';
-import { scanMediaFolder, importMediaFiles } from '../services/media/MediaScanner';
+import { mediaService } from '../services/media/MediaServiceInstance';
 
 // Props for the ClipViewer view
 export interface ClipViewerViewProps {
@@ -38,7 +38,7 @@ export const useClipViewerViewModel = () => {
         const loadClips = async () => {
             try {
                 setIsLoading(true);
-                const loadedClips = await scanMediaFolder();
+                const loadedClips = await mediaService.scanMediaFolder();
                 setClips(loadedClips);
                 setErrorMessage(null);
             } catch (error) {
@@ -79,7 +79,7 @@ export const useClipViewerViewModel = () => {
                     const files = Array.from(target.files);
 
                     // Import the media files
-                    const newClips = await importMediaFiles(files);
+                    const newClips = await mediaService.importMediaFiles(files);
 
                     // Add the new clips to state
                     setClips(currentClips => addClips(currentClips, newClips));
